@@ -46,7 +46,8 @@
                         <canvas id="portraitCanvas"></canvas>
                     </div>
                     <div class="stats-panel">
-                        <div>BASE ATK: @(15 + (SaveData?.TryGetProperty("level", out var lv) == true ? lv.GetInt32() : 1) * 2 + (SaveData?.TryGetProperty("bonusDmg", out var bd) == true ? bd.GetInt32() : 0))</div>
+                        <div>TOTAL ATK: ⚔️ @(15 + (SaveData?.TryGetProperty("level", out var lv) == true ? lv.GetInt32() : 1) * 2 + (SaveData?.TryGetProperty("bonusDmg", out var bd) == true ? bd.GetInt32() : 0) + GetWeaponPower() * 5)</div>
+                        <div>DEFENSE: 🛡️ @GetTotalArmor()</div>
                         <div>GOLD: 💰 @(SaveData?.TryGetProperty("gold", out var g) == true ? g.ToString() : "0")</div>
                     </div>
                     <div class="equipment-slots">
@@ -275,6 +276,24 @@
         return null;
     }
 
+    private int GetWeaponPower()
+    {
+        var item = GetEquippedItem("rightHand");
+        if (item != null && item.Value.TryGetProperty("power", out var p)) return p.GetInt32();
+        return 0;
+    }
+
+    private int GetTotalArmor()
+    {
+        int total = 0;
+        foreach(var slot in new[] { "head", "chest", "hands", "legs", "feet", "leftHand" })
+        {
+            var item = GetEquippedItem(slot);
+            if (item != null && item.Value.TryGetProperty("power", out var p)) total += p.GetInt32();
+        }
+        return total;
+    }
+
     private void BackToSelection() => CurrentState = GameState.ContinueMenu;
     private void ExitToMain() => CurrentState = GameState.MainMenu;
 
@@ -329,6 +348,10 @@
         
         eq[slot] = itemToEquip;
         await UpdateAndSave("equipment", eq, "inventory", inv);
+        
+        // Live Sync: Push new gear stats to the active game engine
+        await JSRuntime.InvokeVoidAsync("window.DungeonCrawler.updateEquipment", eq);
+        
         await JSRuntime.InvokeVoidAsync("window.DungeonCrawler.initPortrait", "portraitCanvas", (object)SaveData);
     }
 
@@ -342,6 +365,10 @@
         inv.Add(item);
         eq[slot] = null;
         await UpdateAndSave("equipment", eq, "inventory", inv);
+        
+        // Live Sync: Push new gear stats to the active game engine
+        await JSRuntime.InvokeVoidAsync("window.DungeonCrawler.updateEquipment", eq);
+        
         await JSRuntime.InvokeVoidAsync("window.DungeonCrawler.initPortrait", "portraitCanvas", (object)SaveData);
     }
 

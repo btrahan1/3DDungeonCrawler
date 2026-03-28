@@ -143,6 +143,13 @@ window.DungeonCrawler = {
         });
     },
 
+    updateEquipment: function(equipData) {
+        if (equipData) {
+            this.equipment = equipData;
+            console.log("Equipment updated in engine:", this.equipment);
+        }
+    },
+
     saveGame: function() {
         const data = { 
             level: this.level, xp: this.xp, gold: this.gold, 
@@ -217,7 +224,12 @@ window.DungeonCrawler = {
 
     handlePlayerAttack: function () {
         if (this.player.isSwinging) return;
-        this.performSwing(this.player); const dmg = 15 + (this.level * 2) + this.bonusDmg;
+        this.performSwing(this.player);
+        
+        let weaponPower = 0;
+        if (this.equipment.rightHand && this.equipment.rightHand.power) weaponPower = this.equipment.rightHand.power;
+        
+        const dmg = 15 + (this.level * 2) + this.bonusDmg + (weaponPower * 5);
         setTimeout(() => {
             this.entities.forEach(n => {
                 if (BABYLON.Vector3.Distance(this.player.position, n.position) < 3 && BABYLON.Vector3.Dot(this.player.forward, n.position.subtract(this.player.position).normalize()) > 0.5) {
@@ -281,7 +293,13 @@ window.DungeonCrawler = {
                         this.performSwing(n); ai.lastAtk = now;
                         setTimeout(() => {
                             if (BABYLON.Vector3.Distance(n.position, this.player.position) < 2.5) {
-                                const dmg = (n.isBoss ? this.currentLevel * 3 : this.currentLevel) + Math.floor(this.currentLevel/2);
+                                let armorPower = 0;
+                                const slots = ["head", "chest", "hands", "legs", "feet", "leftHand"];
+                                slots.forEach(s => { if (this.equipment[s] && this.equipment[s].power) armorPower += this.equipment[s].power; });
+                                
+                                const baseDmg = (n.isBoss ? this.currentLevel * 3 : this.currentLevel) + Math.floor(this.currentLevel/2) + 5;
+                                const dmg = Math.max(1, baseDmg - armorPower);
+
                                 this.player.health -= dmg; this.showDamageText("-" + dmg, this.player.position.clone(), "red");
                             }
                         }, 250);
