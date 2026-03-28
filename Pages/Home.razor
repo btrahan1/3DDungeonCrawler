@@ -1,0 +1,40 @@
+@page "/"
+@inject IJSRuntime JSRuntime
+
+<PageTitle>3D Dungeon Crawler</PageTitle>
+
+<div class="game-container">
+    <canvas id="renderCanvas" style="width: 100%; height: 100vh; touch-action: none;"></canvas>
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("window.DungeonCrawler.init", "renderCanvas");
+        }
+    }
+}
+
+<style>
+    .game-container {
+        width: 100%;
+        height: 100vh;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+        background: #000;
+    }
+    body, html {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+    .top-row, .sidebar {
+        display: none !important;
+    }
+    .content {
+        padding: 0 !important;
+    }
+</style>

@@ -1,0 +1,20 @@
+# Visual Studio / MSBuild
+**/bin/
+**/obj/
+.vs/
+.cache/
+**/Properties/launchSettings.json
+.user
+.suo
+.userosscache
+.sln.docstates
+
+# Blazor
+wwwroot/_framework/
+
+# Log Files
+*.log
+
+# OS Files
+.DS_Store
+Thumbs.db

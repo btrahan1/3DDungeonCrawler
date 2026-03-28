@@ -1,0 +1,95 @@
+{
+  "Name": "Warchief Battleaxe",
+  "Type": "Procedural",
+  "Parts": [
+    {
+      "Id": "handle_main",
+      "Shape": "Cylinder",
+      "Position": [0, 0, 0],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.08, 2.0, 0.08],
+      "ColorHex": "#5C4033",
+      "Material": "Leather",
+      "Operation": "Union"
+    },
+    {
+      "Id": "handle_grip",
+      "Shape": "Capsule",
+      "Position": [0, -0.4, 0],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.1, 0.6, 0.1],
+      "ColorHex": "#3E2723",
+      "Material": "Leather",
+      "Operation": "Union"
+    },
+    {
+      "Id": "axe_socket",
+      "Shape": "Box",
+      "Position": [0, 0.8, 0],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.2, 0.25, 0.2],
+      "ColorHex": "#424242",
+      "Material": "Metal",
+      "Operation": "Union"
+    },
+    {
+      "Id": "blade_primary",
+      "Shape": "Box",
+      "Position": [0.3, 0.85, 0],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.5, 0.7, 0.05],
+      "ColorHex": "#C0C0C0",
+      "Material": "Metal",
+      "Operation": "Union"
+    },
+    {
+      "Id": "blade_edge_cut",
+      "Shape": "Box",
+      "Position": [0.55, 0.85, 0],
+      "Rotation": [0, 0, 45],
+      "Scale": [0.2, 0.2, 1.0],
+      "ColorHex": "#FFFFFF",
+      "Material": "Metal",
+      "Operation": "Subtract"
+    },
+    {
+      "Id": "back_spike",
+      "Shape": "Cone",
+      "Position": [-0.25, 0.8, 0],
+      "Rotation": [0, 0, -90],
+      "Scale": [0.15, 0.4, 0.15],
+      "ColorHex": "#808080",
+      "Material": "Metal",
+      "Operation": "Union"
+    },
+    {
+      "Id": "top_finial",
+      "Shape": "Cone",
+      "Position": [0, 1.05, 0],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.1, 0.2, 0.1],
+      "ColorHex": "#424242",
+      "Material": "Metal",
+      "Operation": "Union"
+    },
+    {
+      "Id": "pommel",
+      "Shape": "Sphere",
+      "Position": [0, -1.0, 0],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.15, 0.15, 0.15],
+      "ColorHex": "#2D1D19",
+      "Material": "Metal",
+      "Operation": "Union"
+    }
+  ],
+  "Timeline": [
+    {
+      "Time": 0.0,
+      "Action": "Rotate",
+      "TargetId": "handle_main",
+      "Value": [0, 360, 0],
+      "Duration": 5.0
+    }
+  ]
+}

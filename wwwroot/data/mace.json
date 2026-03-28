@@ -1,0 +1,115 @@
+{
+"Name": "Heavy Flanged Mace",
+"Type": "Procedural",
+"Parts": [
+{
+"Id": "shaft_main",
+"Shape": "Cylinder",
+"Position": [0, 0, 0],
+"Rotation": [0, 0, 0],
+"Scale": [0.08, 1.8, 0.08],
+"ColorHex": "#3D2B1F",
+"Material": "Metal",
+"Operation": "Union"
+},
+{
+"Id": "grip_leather",
+"Shape": "Capsule",
+"Position": [0, -0.4, 0],
+"Rotation": [0, 0, 0],
+"Scale": [0.1, 0.6, 0.1],
+"ColorHex": "#1A110E",
+"Material": "Leather",
+"Operation": "Union"
+},
+{
+"Id": "pommel_base",
+"Shape": "Sphere",
+"Position": [0, -0.9, 0],
+"Rotation": [0, 0, 0],
+"Scale": [0.15, 0.15, 0.15],
+"ColorHex": "#555555",
+"Material": "Metal",
+"Operation": "Union"
+},
+{
+"Id": "mace_head_core",
+"Shape": "Cylinder",
+"Position": [0, 0.75, 0],
+"Rotation": [0, 0, 0],
+"Scale": [0.15, 0.4, 0.15],
+"ColorHex": "#777777",
+"Material": "Metal",
+"Operation": "Union"
+},
+{
+"Id": "flange_left",
+"Shape": "Box",
+"Position": [0.18, 0.75, 0],
+"Rotation": [0, 0, 0],
+"Scale": [0.25, 0.35, 0.04],
+"ColorHex": "#888888",
+"Material": "Metal",
+"Operation": "Union"
+},
+{
+"Id": "flange_right",
+"Shape": "Box",
+"Position": [-0.18, 0.75, 0],
+"Rotation": [0, 0, 0],
+"Scale": [0.25, 0.35, 0.04],
+"ColorHex": "#888888",
+"Material": "Metal",
+"Operation": "Union"
+},
+{
+"Id": "flange_front",
+"Shape": "Box",
+"Position": [0, 0.75, 0.18],
+"Rotation": [0, 0, 0],
+"Scale": [0.04, 0.35, 0.25],
+"ColorHex": "#888888",
+"Material": "Metal",
+"Operation": "Union"
+},
+{
+"Id": "flange_back",
+"Shape": "Box",
+"Position": [0, 0.75, -0.18],
+"Rotation": [0, 0, 0],
+"Scale": [0.04, 0.35, 0.25],
+"ColorHex": "#888888",
+"Material": "Metal",
+"Operation": "Union"
+},
+{
+"Id": "top_spike",
+"Shape": "Cone",
+"Position": [0, 1.0, 0],
+"Rotation": [0, 0, 0],
+"Scale": [0.12, 0.25, 0.12],
+"ColorHex": "#A0A0A0",
+"Material": "Metal",
+"Operation": "Union"
+},
+{
+"Id": "neck_ring",
+"Shape": "Torus",
+"Position": [0, 0.55, 0],
+"Rotation": [90, 0, 0],
+"Scale": [0.12, 0.12, 0.05],
+"ColorHex": "#C0C0C0",
+"Material": "Metal",
+"Operation": "Union"
+}
+],
+"Timeline": [
+{
+"Time": 0.0,
+"Action": "Rotate",
+"TargetId": "shaft_main",
+"Value": [0, 360, 0],
+"Duration": 8.0
+}
+]
+}

@@ -1,0 +1,92 @@
+{
+"Name": "Steel Longsword",
+"Type": "Procedural",
+"Parts": [
+{
+"Id": "grip",
+"Shape": "Cylinder",
+"Position": [0, -0.3, 0],
+"Rotation": [0, 0, 0],
+"Scale": [0.08, 0.6, 0.08],
+"ColorHex": "#3B2F2F",
+"Material": "Leather",
+"Operation": "Union"
+},
+{
+"Id": "pommel",
+"Shape": "Sphere",
+"Position": [0, -0.65, 0],
+"Rotation": [0, 0, 0],
+"Scale": [0.15, 0.15, 0.15],
+"ColorHex": "#C5B358",
+"Material": "Metal",
+"Operation": "Union"
+},
+{
+"Id": "crossguard_main",
+"Shape": "Box",
+"Position": [0, 0.05, 0],
+"Rotation": [0, 0, 0],
+"Scale": [0.8, 0.1, 0.12],
+"ColorHex": "#C5B358",
+"Material": "Metal",
+"Operation": "Union"
+},
+{
+"Id": "guard_gem",
+"Shape": "Sphere",
+"Position": [0, 0.05, 0.06],
+"Rotation": [0, 0, 0],
+"Scale": [0.08, 0.08, 0.08],
+"ColorHex": "#00FFFF",
+"Material": "Glow",
+"Operation": "Union"
+},
+{
+"Id": "blade_base",
+"Shape": "Box",
+"Position": [0, 0.75, 0],
+"Rotation": [0, 0, 0],
+"Scale": [0.2, 1.3, 0.04],
+"ColorHex": "#E0E0E0",
+"Material": "Metal",
+"Operation": "Union"
+},
+{
+"Id": "blade_tip",
+"Shape": "Cone",
+"Position": [0, 1.575, 0],
+"Rotation": [0, 0, 0],
+"Scale": [0.2, 0.35, 0.04],
+"ColorHex": "#E0E0E0",
+"Material": "Metal",
+"Operation": "Union"
+},
+{
+"Id": "fuller_groove",
+"Shape": "Box",
+"Position": [0, 0.75, 0],
+"Rotation": [0, 0, 0],
+"Scale": [0.04, 1.0, 0.1],
+"ColorHex": "#000000",
+"Material": "Metal",
+"Operation": "Subtract"
+}
+],
+"Timeline": [
+{
+"Time": 0.0,
+"Action": "Rotate",
+"TargetId": "crossguard_main",
+"Value": [0, 360, 0],
+"Duration": 10.0
+},
+{
+"Time": 0.0,
+"Action": "Color",
+"TargetId": "guard_gem",
+"Value": [0, 1, 1],
+"Duration": 2.0
+}
+]
+}
