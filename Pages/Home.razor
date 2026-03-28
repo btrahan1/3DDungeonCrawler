@@ -75,8 +75,73 @@
             <h2>@(SaveData?.TryGetProperty("name", out var n) == true ? n.GetString() : "HERO") CONTINUED</h2>
             <div class="status-summary">LVL @(SaveData?.TryGetProperty("level", out var l) == true ? l.ToString() : "1") @(SaveData?.TryGetProperty("class", out var c) == true ? c.GetString() : "WARRIOR") (Floor @(SaveData?.TryGetProperty("currentLevel", out var f) == true ? f.ToString() : "1"))</div>
             <button class="btn-start" @onclick="StartDungeon">ENTER DUNGEON</button>
-            <button class="btn-menu" @onclick="OpenShop">ENTER SHOP</button>
+            <div class="menu-row">
+                <button class="btn-menu" @onclick="OpenShop">ENTER SHOP</button>
+                <button class="btn-menu btn-bank" @onclick="OpenBank">ENTER BANK</button>
+            </div>
             <button class="btn-menu btn-back" @onclick="OpenCharacterSelect">BACK</button>
+        </div>
+    }
+
+    @if (CurrentState == GameState.Bank)
+    {
+        <div class="overlay bank-menu">
+            <h2 class="title-small">THE SHARED VAULT</h2>
+            <div class="bank-container">
+                <!-- Left: Vault Storage -->
+                <div class="bank-section vault">
+                    <h3>🏛️ THE VAULT (@BankItems.Count / 24)</h3>
+                    <div class="inventory-grid bank-grid">
+                        @for (int i = 0; i < 24; i++)
+                        {
+                            var index = i;
+                            var item = i < BankItems.Count ? (System.Text.Json.JsonElement?)BankItems[i] : null;
+                            <div class="grid-slot">
+                                @if (item != null)
+                                {
+                                    <div class='item-icon tier-@(item.Value.TryGetProperty("tier", out var t) ? t.GetString().ToLower() : "iron")' 
+                                         title='@item.Value.GetProperty("name").GetString() (Power: {(item.Value.TryGetProperty("power", out var p) ? p.GetInt32() : 0)})'
+                                         @onclick="() => WithdrawFromBank(index)">
+                                        @((MarkupString)GetSvgIcon(item.Value.GetProperty("slot").GetString()))
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="gold-controls">
+                        <div class="gold-amount">VAULT GOLD: 💰 @BankGold</div>
+                        <button class="btn-gold" @onclick="WithdrawAllGold">WITHDRAW ALL</button>
+                    </div>
+                </div>
+
+                <!-- Right: Player Bag -->
+                <div class="bank-section bag">
+                    <h3>🎒 YOUR BAG (@(GetInventoryCount()) / 16)</h3>
+                    <div class="inventory-grid player-grid">
+                        @for (int i = 0; i < 16; i++)
+                        {
+                            var index = i;
+                            var invItem = GetInventoryItem(index);
+                            <div class="grid-slot">
+                                @if (invItem != null)
+                                {
+                                    var slotNm = invItem.Value.GetProperty("slot").GetString();
+                                    <div class='item-icon tier-@(invItem.Value.TryGetProperty("tier", out var t) ? t.GetString().ToLower() : "iron")' 
+                                         title='@invItem.Value.GetProperty("name").GetString() (Power: {(invItem.Value.TryGetProperty("power", out var p) ? p.GetInt32() : 0)})'
+                                         @onclick="() => DepositToBank(index)">
+                                        @((MarkupString)GetSvgIcon(slotNm))
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="gold-controls">
+                        <div class="gold-amount">BAG GOLD: 💰 @(SaveData?.TryGetProperty("gold", out var g) == true ? g.GetInt32() : 0)</div>
+                        <button class="btn-gold" @onclick="DepositAllGold">DEPOSIT ALL</button>
+                    </div>
+                </div>
+            </div>
+            <button class="btn-menu btn-back" @onclick="BackToSelection">BACK</button>
         </div>
     }
 
@@ -193,7 +258,7 @@
  </div>
 
 @code {
-    private enum GameState { MainMenu, CharacterSelect, ContinueMenu, Playing, ESCMenu, Shop }
+    private enum GameState { MainMenu, CharacterSelect, ContinueMenu, Playing, ESCMenu, Shop, Bank }
     private GameState CurrentState = GameState.MainMenu;
     private bool HasSave = false;
     private System.Text.Json.JsonElement? SaveData = null;
@@ -204,6 +269,10 @@
     private string selectedRace = "HUMAN";
     private string activeTab = "shop";
     private string LootMessage = "";
+    
+    // Bank Shared Data
+    private int BankGold = 0;
+    private List<System.Text.Json.JsonElement> BankItems = new();
     
     private class SlotMetadata {
         public string Name { get; set; } = "Adventurer";
@@ -220,6 +289,7 @@
         {
             await MigrateOldSave();
             await LoadMetadata();
+            await LoadBank();
             StateHasChanged();
         }
     }
@@ -294,6 +364,11 @@
         await LoadMetadata();
         CurrentState = GameState.ContinueMenu;
     }
+    private async Task StartDungeon()
+    {
+        CurrentState = GameState.Playing;
+        await JSRuntime.InvokeVoidAsync("window.DungeonCrawler.init", "renderCanvas", DotNetObjectReference.Create(this), (object)SaveData);
+    }
 
     private async Task LoadCharacter(int slot)
     {
@@ -315,11 +390,100 @@
         }
     }
 
-    private async Task StartDungeon()
+    private async Task OpenBank()
     {
-        CurrentState = GameState.Playing;
-        await JSRuntime.InvokeVoidAsync("window.DungeonCrawler.init", "renderCanvas", DotNetObjectReference.Create(this), (object)SaveData);
+        await LoadBank();
+        CurrentState = GameState.Bank;
     }
+
+    private async Task LoadBank()
+    {
+        try {
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "dungeonSave_bank");
+            if (!string.IsNullOrEmpty(json)) {
+                var doc = System.Text.Json.JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                BankGold = root.TryGetProperty("gold", out var g) ? g.GetInt32() : 0;
+                BankItems.Clear();
+                if (root.TryGetProperty("items", out var items)) {
+                    foreach(var it in items.EnumerateArray()) BankItems.Add(it);
+                }
+            } else {
+                BankGold = 0; BankItems.Clear();
+                await SaveBank();
+            }
+        } catch { }
+    }
+
+    private async Task SaveBank()
+    {
+        var data = new { gold = BankGold, items = BankItems };
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "dungeonSave_bank", System.Text.Json.JsonSerializer.Serialize(data));
+    }
+
+    private async Task DepositAllGold()
+    {
+        if (SaveData?.TryGetProperty("gold", out var g) == true)
+        {
+            int amount = g.GetInt32();
+            if (amount > 0) {
+                BankGold += amount;
+                await UpdateAndSave("gold", 0);
+                await SaveBank();
+            }
+        }
+    }
+
+    private async Task WithdrawAllGold()
+    {
+        if (BankGold > 0) {
+            int currentGold = SaveData?.TryGetProperty("gold", out var g) == true ? g.GetInt32() : 0;
+            await UpdateAndSave("gold", currentGold + BankGold);
+            BankGold = 0;
+            await SaveBank();
+        }
+    }
+
+    private async Task DepositToBank(int invIndex)
+    {
+        if (BankItems.Count >= 24) return;
+        var inv = GetInventoryList();
+        if (invIndex < 0 || invIndex >= inv.Count) return;
+
+        // Add to Bank
+        var item = inv[invIndex];
+        BankItems.Add(System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(System.Text.Json.JsonSerializer.Serialize(item)));
+        
+        // Remove from inventory
+        inv.RemoveAt(invIndex);
+        await UpdateAndSave("inventory", inv);
+        await SaveBank();
+    }
+
+    private async Task WithdrawFromBank(int bankIndex)
+    {
+        var inv = GetInventoryList();
+        if (inv.Count >= 16 || bankIndex < 0 || bankIndex >= BankItems.Count) return;
+
+        // Add to Player
+        var item = BankItems[bankIndex];
+        inv.Add(System.Text.Json.JsonSerializer.Deserialize<object>(item.GetRawText())!);
+        
+        // Remove from Bank
+        BankItems.RemoveAt(bankIndex);
+        await UpdateAndSave("inventory", inv);
+        await SaveBank();
+    }
+
+    private List<object> GetInventoryList()
+    {
+        if (SaveData?.TryGetProperty("inventory", out var inv) == true)
+            return System.Text.Json.JsonSerializer.Deserialize<List<object>>(inv.GetRawText()) ?? new List<object>();
+        return new List<object>();
+    }
+
+    private int GetInventoryCount() => GetInventoryList().Count;
+
 
     private async Task OpenShop() 
     {
@@ -427,7 +591,11 @@
         return total;
     }
 
-    private void BackToSelection() => CurrentState = GameState.ContinueMenu;
+    private void BackToSelection() 
+    {
+        CurrentState = GameState.ContinueMenu;
+        StateHasChanged();
+    }
     private void ExitToMain() => CurrentState = GameState.MainMenu;
 
     private async Task BuyHeal()
@@ -645,7 +813,48 @@
     .btn-new { background: #222; color: #d4af37; border-color: #d4af37; width: 100%; }
     .btn-create { background: #d4af37; color: #000; font-weight: bold; }
 
-    .btn-slot:hover { transform: translateY(-2px); filter: brightness(1.2); }
+    .menu-row { display: flex; gap: 10px; margin-top: 10px; }
+    .btn-bank { background: #d4af37; color: #000; font-weight: bold; }
+
+    .bank-container {
+        display: flex;
+        gap: 30px;
+        background: rgba(10,10,15,0.95);
+        padding: 30px;
+        border: 2px solid #d4af37;
+        margin-bottom: 2rem;
+    }
+
+    .bank-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .bank-section h3 {
+        font-family: 'Almendra SC', serif;
+        color: #d4af37;
+        margin-bottom: 1rem;
+    }
+
+    .bank-grid { grid-template-columns: repeat(4, 1fr) !important; height: auto !important; }
+    .gold-controls { 
+        margin-top: 2rem; 
+        text-align: center; 
+        border-top: 1px solid #333; 
+        padding-top: 1rem; 
+        width: 100%;
+    }
+    .gold-amount { font-family: 'MedievalSharp'; color: #fff; font-size: 1.2rem; margin-bottom: 0.5rem; }
+    .btn-gold { 
+        background: #8b0000; 
+        color: #fff; 
+        border: 1px solid #d4af37; 
+        padding: 5px 15px; 
+        cursor: pointer;
+        font-family: 'MedievalSharp';
+    }
 
     .subtitle {
         font-family: 'MedievalSharp', cursive;
