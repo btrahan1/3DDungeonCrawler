@@ -5,19 +5,66 @@
 
 <div class="game-container">
     <canvas id="renderCanvas" style="width: 100%; height: 100vh; touch-action: none;"></canvas>
+
+    @if (CurrentState == GameState.MainMenu)
+    {
+        <div class="overlay main-menu">
+            <h1 class="title">DUNGEON CRAWLER</h1>
+            <button class="btn-start" @onclick="EnterDungeon">ENTER DUNGEON</button>
+            <div class="subtitle">Descend into the darkness...</div>
+        </div>
+    }
+
+    @if (CurrentState == GameState.ESCMenu)
+    {
+        <div class="overlay esc-menu">
+            <h2>PAUSED</h2>
+            <button class="btn-menu" @onclick="ResumeGame">RESUME</button>
+            <button class="btn-menu" @onclick="ExitDungeon">EXIT DUNGEON</button>
+        </div>
+    }
 </div>
 
 @code {
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private enum GameState { MainMenu, Playing, ESCMenu }
+    private GameState CurrentState = GameState.MainMenu;
+
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            await JSRuntime.InvokeVoidAsync("window.DungeonCrawler.init", "renderCanvas");
-        }
+        // Pre-register JS callback for ESC key
+        var objRef = DotNetObjectReference.Create(this);
+        // We'll call this from JS when ESC is pressed
+    }
+
+    private async Task EnterDungeon()
+    {
+        CurrentState = GameState.Playing;
+        await JSRuntime.InvokeVoidAsync("window.DungeonCrawler.init", "renderCanvas");
+    }
+
+    private void ResumeGame()
+    {
+        CurrentState = GameState.Playing;
+    }
+
+    private void ExitDungeon()
+    {
+        CurrentState = GameState.MainMenu;
+        // Notify game to clear memory if needed
+    }
+
+    [JSInvokable]
+    public void ToggleESCMenu()
+    {
+        if (CurrentState == GameState.Playing) CurrentState = GameState.ESCMenu;
+        else if (CurrentState == GameState.ESCMenu) CurrentState = GameState.Playing;
+        StateHasChanged();
     }
 }
 
 <style>
+    @@import url('https://fonts.googleapis.com/css2?family=Almendra+SC&family=MedievalSharp&display=swap');
+
     .game-container {
         width: 100%;
         height: 100vh;
@@ -25,16 +72,92 @@
         margin: 0;
         padding: 0;
         background: #000;
+        position: relative;
     }
-    body, html {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
+
+    .overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 100;
+        color: #fff;
+        text-align: center;
     }
-    .top-row, .sidebar {
-        display: none !important;
+
+    .main-menu {
+        background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.7)), url('images/start_bg.png');
+        background-size: cover;
+        background-position: center;
     }
-    .content {
-        padding: 0 !important;
+
+    .title {
+        font-family: 'Almendra SC', serif;
+        font-size: 5rem;
+        color: #d4af37;
+        text-shadow: 0 0 20px rgba(212, 175, 55, 0.6), 4px 4px 5px #000;
+        margin-bottom: 2rem;
+        letter-spacing: 0.5rem;
     }
+
+    .subtitle {
+        font-family: 'MedievalSharp', cursive;
+        font-size: 1.2rem;
+        color: #aaa;
+        margin-top: 2rem;
+        letter-spacing: 0.2rem;
+    }
+
+    .btn-start {
+        font-family: 'MedievalSharp', cursive;
+        padding: 1.5rem 4rem;
+        font-size: 2rem;
+        background: #8b0000;
+        color: white;
+        border: 3px solid #d4af37;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 0 15px rgba(139, 0, 0, 0.5);
+    }
+
+    .btn-start:hover {
+        background: #a52a2a;
+        transform: scale(1.05);
+        box-shadow: 0 0 25px rgba(212, 175, 55, 0.8);
+    }
+
+    .esc-menu h2 {
+        font-family: 'Almendra SC', serif;
+        font-size: 3rem;
+        color: #d4af37;
+        margin-bottom: 2rem;
+    }
+
+    .btn-menu {
+        font-family: 'MedievalSharp', cursive;
+        padding: 1rem 3rem;
+        font-size: 1.5rem;
+        background: #222;
+        color: #eee;
+        border: 2px solid #555;
+        margin: 0.5rem;
+        width: 300px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-menu:hover {
+        background: #444;
+        border-color: #d4af37;
+    }
+
+    body, html { margin: 0; padding: 0; overflow: hidden; }
+    .top-row, .sidebar { display: none !important; }
+    .content { padding: 0 !important; }
 </style>

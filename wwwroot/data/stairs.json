@@ -1,0 +1,66 @@
+{
+  "Name": "Dungeon Stairs",
+  "Type": "Procedural",
+  "Parts": [
+    {
+      "Id": "base",
+      "Shape": "Box",
+      "Position": [0, 0.05, 0],
+      "Rotation": [0, 0, 0],
+      "Scale": [1.2, 0.1, 1.2],
+      "ColorHex": "#333333",
+      "Material": "Stone",
+      "Operation": "Union"
+    },
+    {
+      "Id": "step_1",
+      "Shape": "Box",
+      "Position": [0, 0.15, -0.4],
+      "Rotation": [0, 0, 0],
+      "Scale": [1.0, 0.1, 0.2],
+      "ColorHex": "#444444",
+      "Material": "Stone",
+      "Operation": "Union"
+    },
+    {
+      "Id": "step_2",
+      "Shape": "Box",
+      "Position": [0, 0.25, -0.2],
+      "Rotation": [0, 0, 0],
+      "Scale": [1.0, 0.1, 0.2],
+      "ColorHex": "#555555",
+      "Material": "Stone",
+      "Operation": "Union"
+    },
+    {
+      "Id": "step_3",
+      "Shape": "Box",
+      "Position": [0, 0.35, 0],
+      "Rotation": [0, 0, 0],
+      "Scale": [1.0, 0.1, 0.2],
+      "ColorHex": "#666666",
+      "Material": "Stone",
+      "Operation": "Union"
+    },
+    {
+      "Id": "step_4",
+      "Shape": "Box",
+      "Position": [0, 0.45, 0.2],
+      "Rotation": [0, 0, 0],
+      "Scale": [1.0, 0.1, 0.2],
+      "ColorHex": "#777777",
+      "Material": "Stone",
+      "Operation": "Union"
+    },
+    {
+      "Id": "step_5",
+      "Shape": "Box",
+      "Position": [0, 0.55, 0.4],
+      "Rotation": [0, 0, 0],
+      "Scale": [1.0, 0.1, 0.2],
+      "ColorHex": "#888888",
+      "Material": "Stone",
+      "Operation": "Union"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "Name": "Heroic Shield",
+  "Type": "Procedural",
+  "Parts": [
+    {
+      "Id": "plate",
+      "Shape": "Box",
+      "Position": [0, 0, 0],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.6, 0.8, 0.05],
+      "ColorHex": "#E0E0E0",
+      "Material": "Metal",
+      "Operation": "Union"
+    },
+    {
+      "Id": "border",
+      "Shape": "Box",
+      "Position": [0, 0, 0.01],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.65, 0.85, 0.03],
+      "ColorHex": "#C5B358",
+      "Material": "Metal",
+      "Operation": "Union"
+    },
+    {
+      "Id": "boss",
+      "Shape": "Sphere",
+      "Position": [0, 0, 0.05],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.15, 0.15, 0.1],
+      "ColorHex": "#C5B358",
+      "Material": "Metal",
+      "Operation": "Union"
+    },
+    {
+      "Id": "handle",
+      "Shape": "Box",
+      "Position": [0, 0, -0.05],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.1, 0.3, 0.05],
+      "ColorHex": "#4E362A",
+      "Material": "Wood",
+      "Operation": "Union"
+    }
+  ]
+}
