@@ -10,27 +10,63 @@
     {
         <div class="overlay main-menu">
             <h1 class="title">DUNGEON CRAWLER</h1>
-            @if (HasSave)
-            {
-                <button class="btn-start btn-continue" @onclick="ContinueGame">CONTINUE</button>
-                <button class="btn-menu btn-newgame" @onclick="NewGame">NEW GAME</button>
-            }
-            else
-            {
-                <button class="btn-start" @onclick="NewGame">ENTER DUNGEON</button>
-            }
+            <button class="btn-start" @onclick="OpenCharacterSelect">START JOURNEY</button>
             <div class="subtitle">Descend into the darkness...</div>
+        </div>
+    }
+
+    @if (CurrentState == GameState.CharacterSelect)
+    {
+        <div class="overlay char-select-menu">
+            <h2 class="title-small">SELECT CHARACTER</h2>
+            <div class="slots-container">
+                @for (int i = 0; i < 3; i++)
+                {
+                    var slotIndex = i;
+                    var meta = SlotMeta.ContainsKey(slotIndex) ? SlotMeta[slotIndex] : null;
+                    <div class="char-slot @(meta == null ? "empty" : "active")">
+                        @if (meta != null)
+                        {
+                            <div class="slot-info">
+                                <div class="slot-name">@meta.Name</div>
+                                <div class="slot-stats">LVL @meta.Level @meta.Class</div>
+                                <div class="slot-floor">FLOOR @meta.Floor</div>
+                            </div>
+                            <div class="slot-actions">
+                                <button class="btn-slot btn-resume" @onclick="() => LoadCharacter(slotIndex)">RESUME</button>
+                                <button class="btn-slot btn-delete" @onclick="() => ConfirmDelete(slotIndex)">DELETE</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="slot-empty-text">EMPTY SLOT</div>
+                            @if (creatingSlot == slotIndex)
+                            {
+                                <div class="name-entry">
+                                    <input @bind="newName" placeholder="NAME..." maxlength="12" />
+                                    <button class="btn-slot btn-create" @onclick="() => CreateCharacter(slotIndex)">CREATE</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <button class="btn-slot btn-new" @onclick="() => creatingSlot = slotIndex">NEW HERO</button>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+            <button class="btn-menu btn-back" @onclick="ExitToMain">BACK</button>
         </div>
     }
 
     @if (CurrentState == GameState.ContinueMenu)
     {
         <div class="overlay selection-menu">
-            <h2>GAME CONTINUED</h2>
-            <div class="status-summary">LVL @(SaveData?.TryGetProperty("level", out var l) == true ? l.ToString() : "1") WARRIOR (Floor @(SaveData?.TryGetProperty("currentLevel", out var f) == true ? f.ToString() : "1"))</div>
+            <h2>@(SaveData?.TryGetProperty("name", out var n) == true ? n.GetString() : "HERO") CONTINUED</h2>
+            <div class="status-summary">LVL @(SaveData?.TryGetProperty("level", out var l) == true ? l.ToString() : "1") @(SaveData?.TryGetProperty("class", out var c) == true ? c.GetString() : "WARRIOR") (Floor @(SaveData?.TryGetProperty("currentLevel", out var f) == true ? f.ToString() : "1"))</div>
             <button class="btn-start" @onclick="StartDungeon">ENTER DUNGEON</button>
             <button class="btn-menu" @onclick="OpenShop">ENTER SHOP</button>
-            <button class="btn-menu btn-back" @onclick="ExitToMain">BACK</button>
+            <button class="btn-menu btn-back" @onclick="OpenCharacterSelect">BACK</button>
         </div>
     }
 
@@ -144,28 +180,31 @@
             <div class="loot-item">@LootMessage</div>
         </div>
     }
- }
-</div>
+ </div>
 
 @code {
-    private enum GameState { MainMenu, ContinueMenu, Playing, ESCMenu, Shop }
+    private enum GameState { MainMenu, CharacterSelect, ContinueMenu, Playing, ESCMenu, Shop }
     private GameState CurrentState = GameState.MainMenu;
     private bool HasSave = false;
     private System.Text.Json.JsonElement? SaveData = null;
+    private int activeSlot = 0;
+    private int? creatingSlot = null;
+    private string newName = "";
     private string activeTab = "shop";
     private string LootMessage = "";
+    
+    private class SlotMetadata {
+        public string Name { get; set; } = "Adventurer";
+        public int Level { get; set; } = 1;
+        public int Floor { get; set; } = 1;
+        public string Class { get; set; } = "WARRIOR";
+    }
+    private Dictionary<int, SlotMetadata> SlotMeta = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            var saveJson = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "dungeonSave");
-            HasSave = !string.IsNullOrEmpty(saveJson);
-            StateHasChanged();
-        }
-    }
-
-    private async Task NewGame()
     {
         await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "dungeonSave");
         CurrentState = GameState.Playing;
@@ -374,7 +413,7 @@
 
     private async Task UpdateAndSave(params object[] kvs)
     {
-        var saveJson = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "dungeonSave");
+        var saveJson = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "dungeonSave_slot_" + activeSlot);
         var dict = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<string, object>>(saveJson) ?? new Dictionary<string, object>();
         
         for(int i=0; i<kvs.Length; i+=2) {
@@ -382,7 +421,7 @@
         }
 
         var newSave = System.Text.Json.JsonSerializer.Serialize(dict);
-        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "dungeonSave", newSave);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "dungeonSave_slot_" + activeSlot, newSave);
         SaveData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(newSave);
         StateHasChanged();
     }
@@ -450,14 +489,60 @@
         background-position: center;
     }
 
-    .title {
+    .title-small {
         font-family: 'Almendra SC', serif;
-        font-size: 5rem;
+        font-size: 3rem;
         color: #d4af37;
-        text-shadow: 0 0 20px rgba(212, 175, 55, 0.6), 4px 4px 5px #000;
         margin-bottom: 2rem;
-        letter-spacing: 0.5rem;
     }
+
+    .slots-container {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 3rem;
+    }
+
+    .char-slot {
+        width: 250px;
+        height: 350px;
+        background: rgba(20,20,25,0.9);
+        border: 2px solid #555;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        transition: all 0.3s;
+    }
+
+    .char-slot.active { border-color: #d4af37; box-shadow: 0 0 15px rgba(212, 175, 55, 0.2); }
+    .char-slot.active:hover { border-color: #fff; box-shadow: 0 0 25px rgba(212, 175, 55, 0.4); }
+
+    .slot-info { margin-bottom: 2rem; }
+    .slot-name { font-family: 'Almendra SC'; font-size: 1.8rem; color: #d4af37; margin-bottom: 0.5rem; }
+    .slot-stats { font-family: 'MedievalSharp'; color: #aaa; margin-bottom: 0.3rem; }
+    .slot-floor { font-family: 'MedievalSharp'; color: #888; }
+    
+    .slot-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+    .slot-empty-text { font-family: 'MedievalSharp'; color: #444; font-size: 1.2rem; margin-bottom: 2rem; }
+
+    .name-entry { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+    .name-entry input { background: #333; border: 1px solid #d4af37; color: #fff; padding: 10px; text-align: center; font-family: 'MedievalSharp'; font-size: 1rem; }
+
+    .btn-slot {
+        font-family: 'MedievalSharp', cursive;
+        padding: 0.8rem;
+        border: 1px solid #666;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-resume { background: #8b0000; color: #fff; border-color: #d4af37; }
+    .btn-delete { background: #333; color: #888; font-size: 0.8rem; }
+    .btn-new { background: #222; color: #d4af37; border-color: #d4af37; width: 100%; }
+    .btn-create { background: #d4af37; color: #000; font-weight: bold; }
+
+    .btn-slot:hover { transform: translateY(-2px); filter: brightness(1.2); }
 
     .subtitle {
         font-family: 'MedievalSharp', cursive;
