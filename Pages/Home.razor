@@ -29,7 +29,7 @@
                         {
                             <div class="slot-info">
                                 <div class="slot-name">@meta.Name</div>
-                                <div class="slot-stats">LVL @meta.Level @meta.Class</div>
+                                <div class="slot-stats">LVL @meta.Level @meta.Race @meta.Class</div>
                                 <div class="slot-floor">FLOOR @meta.Floor</div>
                             </div>
                             <div class="slot-actions">
@@ -44,6 +44,16 @@
                             {
                                 <div class="name-entry">
                                     <input @bind="newName" placeholder="NAME..." maxlength="12" />
+                                    <select @bind="selectedClass" class="char-select-dropdown">
+                                        <option value="WARRIOR">WARRIOR</option>
+                                        <option value="MAGE">MAGE (SOON)</option>
+                                        <option value="ROGUE">ROGUE (SOON)</option>
+                                    </select>
+                                    <select @bind="selectedRace" class="char-select-dropdown">
+                                        <option value="HUMAN">HUMAN</option>
+                                        <option value="ELF">ELF (+DMG)</option>
+                                        <option value="DWARF">DWARF (+HP)</option>
+                                    </select>
                                     <button class="btn-slot btn-create" @onclick="() => CreateCharacter(slotIndex)">CREATE</button>
                                 </div>
                             }
@@ -190,6 +200,8 @@
     private int activeSlot = 0;
     private int? creatingSlot = null;
     private string newName = "";
+    private string selectedClass = "WARRIOR";
+    private string selectedRace = "HUMAN";
     private string activeTab = "shop";
     private string LootMessage = "";
     
@@ -198,6 +210,7 @@
         public int Level { get; set; } = 1;
         public int Floor { get; set; } = 1;
         public string Class { get; set; } = "WARRIOR";
+        public string Race { get; set; } = "HUMAN";
     }
     private Dictionary<int, SlotMetadata> SlotMeta = new();
 
@@ -205,19 +218,100 @@
     {
         if (firstRender)
         {
-    {
-        await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "dungeonSave");
-        CurrentState = GameState.Playing;
-        await JSRuntime.InvokeVoidAsync("window.DungeonCrawler.init", "renderCanvas", DotNetObjectReference.Create(this));
+            await MigrateOldSave();
+            await LoadMetadata();
+            StateHasChanged();
+        }
     }
 
-    private async Task ContinueGame()
+    private async Task MigrateOldSave()
     {
-        var saveJson = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "dungeonSave");
-        if (!string.IsNullOrEmpty(saveJson))
-        {
-            SaveData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(saveJson);
+        try {
+            var oldSave = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "dungeonSave");
+            if (!string.IsNullOrEmpty(oldSave)) {
+                var slot0 = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "dungeonSave_slot_0");
+                if (string.IsNullOrEmpty(slot0)) {
+                    await JSRuntime.InvokeVoidAsync("localStorage.setItem", "dungeonSave_slot_0", oldSave);
+                }
+                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "dungeonSave");
+            }
+        } catch {}
+    }
+
+    private async Task LoadMetadata()
+    {
+        try {
+            SlotMeta.Clear();
+            for (int i = 0; i < 3; i++) {
+                var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "dungeonSave_slot_" + i);
+                if (!string.IsNullOrEmpty(json)) {
+                    var doc = System.Text.Json.JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+                    SlotMeta[i] = new SlotMetadata {
+                        Name = root.TryGetProperty("name", out var n) ? n.GetString()! : "Adventurer",
+                        Level = root.TryGetProperty("level", out var l) ? l.GetInt32() : 1,
+                        Floor = root.TryGetProperty("currentLevel", out var f) ? f.GetInt32() : 1,
+                        Class = root.TryGetProperty("class", out var c) ? c.GetString()! : "WARRIOR",
+                        Race = root.TryGetProperty("race", out var r) ? r.GetString()! : "HUMAN"
+                    };
+                }
+            }
+            HasSave = SlotMeta.Count > 0;
+        } catch {}
+    }
+
+    private async Task OpenCharacterSelect()
+    {
+        await LoadMetadata();
+        CurrentState = GameState.CharacterSelect;
+    }
+
+    private async Task CreateCharacter(int slot)
+    {
+        if (string.IsNullOrWhiteSpace(newName)) newName = "ADVENTURER";
+        activeSlot = slot;
+        activeTab = "shop";
+        
+        int startHP = 100;
+        int startDmg = 0;
+        if (selectedRace == "DWARF") startHP = 120;
+        if (selectedRace == "ELF") startDmg = 2;
+        
+        var initialSave = new {
+            name = newName.ToUpper(),
+            @class = selectedClass,
+            race = selectedRace,
+            level = 1, xp = 0, gold = 0, currentLevel = 1, maxHealth = startHP, bonusDmg = startDmg,
+            equipment = new { }, inventory = new List<object>(), xpToNext = 100
+        };
+        
+        var json = System.Text.Json.JsonSerializer.Serialize(initialSave);
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "dungeonSave_slot_" + slot, json);
+        SaveData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(json);
+        
+        creatingSlot = null;
+        newName = "";
+        await LoadMetadata();
+        CurrentState = GameState.ContinueMenu;
+    }
+
+    private async Task LoadCharacter(int slot)
+    {
+        activeSlot = slot;
+        var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "dungeonSave_slot_" + slot);
+        if (!string.IsNullOrEmpty(json)) {
+            SaveData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(json);
             CurrentState = GameState.ContinueMenu;
+        }
+    }
+
+    private async Task ConfirmDelete(int slot)
+    {
+        bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "DELETE THIS CHARACTER PERMANENTLY?");
+        if (confirmed) {
+            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "dungeonSave_slot_" + slot);
+            await LoadMetadata();
+            StateHasChanged();
         }
     }
 
@@ -528,6 +622,15 @@
 
     .name-entry { display: flex; flex-direction: column; gap: 10px; width: 100%; }
     .name-entry input { background: #333; border: 1px solid #d4af37; color: #fff; padding: 10px; text-align: center; font-family: 'MedievalSharp'; font-size: 1rem; }
+    
+    .char-select-dropdown {
+        background: #222;
+        border: 1px solid #666;
+        color: #d4af37;
+        padding: 8px;
+        font-family: 'MedievalSharp';
+        outline: none;
+    }
 
     .btn-slot {
         font-family: 'MedievalSharp', cursive;
