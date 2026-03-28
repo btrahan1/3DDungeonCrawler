@@ -1,7 +1,7 @@
 window.DungeonCrawler = {
     canvas: null, engine: null, scene: null, camera: null, player: null, ui: null,
     inputMap: {}, entities: [], chests: [], stairs: null,
-    dungeonSize: 30, gridSize: 2.5, currentLevel: 1, dotnetRef: null,
+    dungeonSize: 60, gridSize: 2.5, currentLevel: 1, dotnetRef: null,
     isTransitioning: false, isDead: false,
     xp: 0, level: 1, xpToNext: 100, gold: 0, maxHealth: 100, bonusDmg: 0,
     equipment: {}, inventory: [],
@@ -37,7 +37,7 @@ window.DungeonCrawler = {
 
         this.camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 3, 15, BABYLON.Vector3.Zero(), this.scene);
         this.camera.attachControl(this.canvas, true);
-        this.camera.lowerRadiusLimit = 5; this.camera.upperRadiusLimit = 40;
+        this.camera.lowerRadiusLimit = 5; this.camera.upperRadiusLimit = 80;
 
         const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), this.scene);
         hemi.intensity = 0.4;
@@ -55,7 +55,10 @@ window.DungeonCrawler = {
                 this.inputMap[key] = true;
                 if (key === " " && !this.isDead) this.handlePlayerAttack();
                 if (key === "e" && !this.isDead) this.handleInteractions();
-                if (key === "escape") { if (this.dotnetRef) this.dotnetRef.invokeMethodAsync("ToggleESCMenu"); }
+                if (key === "escape") {
+                    if (this.dotnetRef) this.dotnetRef.invokeMethodAsync("OnPause");
+                    this.inputMap["escape"] = false;
+                }
             } else { this.inputMap[key] = false; }
         });
 
@@ -67,7 +70,13 @@ window.DungeonCrawler = {
         };
 
         const dungeonData = this.generateDungeon(this.dungeonSize, this.dungeonSize);
-        this.renderDungeon(dungeonData.grid, shadowGen);
+        this.renderDungeon(dungeonData.grid, shadowGen, dungeonData.bossRoom);
+
+        if (dungeonData.bossRoom) {
+            const br = dungeonData.bossRoom;
+            const bLight = new BABYLON.PointLight("bossLight", new BABYLON.Vector3((br.x + br.w/2) * this.gridSize, 2, (br.y + br.h/2) * this.gridSize), this.scene);
+            bLight.diffuse = new BABYLON.Color3(0.8, 0.1, 0.1); bLight.intensity = 1.0; bLight.range = 15;
+        }
 
         try {
             const res = await fetch('data/Player.json');
@@ -88,15 +97,29 @@ window.DungeonCrawler = {
         } catch (e) { console.error(e); }
 
         for (let i = 1; i < dungeonData.rooms.length; i++) {
-            if (Math.random() > 0.6) continue;
             const room = dungeonData.rooms[i];
+            const isBossRoom = (i === dungeonData.rooms.length - 1);
+            
+            if (!isBossRoom && Math.random() > 0.6) continue;
+            
             const isG = Math.random() > 0.4;
             const resN = await fetch(isG ? 'data/goblin.json' : 'data/orc.json');
-            const npc = await this.loadVoxelModel(await resN.json(), shadowGen, { right: isG ? 'data/axe.json' : 'data/mace.json' });
-            npc.position = new BABYLON.Vector3((room.x+room.w/2)*this.gridSize, 0.1, (room.y+room.h/2)*this.gridSize);
-            npc.health = isG ? 30 : 60; npc.maxHealth = npc.health; npc.isNPC = true; this.entities.push(npc); this.createHealthBar(npc);
+            const eMap = isG ? { right: 'data/axe.json' } : { right: 'data/mace.json' };
+            const npc = await this.loadVoxelModel(await resN.json(), shadowGen, eMap);
             
-            if (Math.random() > 0.5) {
+            npc.position = new BABYLON.Vector3((room.x+room.w/2)*this.gridSize, 0.1, (room.y+room.h/2)*this.gridSize);
+            
+            if (isBossRoom) {
+                npc.scaling.set(2.25, 2.25, 2.25);
+                npc.health = (isG ? 100 : 200) + (this.currentLevel * 20);
+                npc.isBoss = true;
+            } else {
+                npc.health = isG ? 30 : 60;
+            }
+            
+            npc.maxHealth = npc.health; npc.isNPC = true; this.entities.push(npc); this.createHealthBar(npc, isBossRoom ? -150 : -100);
+            
+            if (!isBossRoom && Math.random() > 0.5) {
                 const chest = await this.loadProp('data/chest.json', shadowGen);
                 chest.position = new BABYLON.Vector3((room.x+1)*this.gridSize, 0, (room.y+1)*this.gridSize);
                 chest.isChest = true; this.chests.push(chest);
@@ -105,7 +128,7 @@ window.DungeonCrawler = {
 
         const lastRoom = dungeonData.rooms[dungeonData.rooms.length - 1];
         this.stairs = await this.loadProp('data/stairs.json', shadowGen);
-        this.stairs.position = new BABYLON.Vector3((lastRoom.x + lastRoom.w - 1) * this.gridSize, 0, (lastRoom.y + lastRoom.h - 1) * this.gridSize);
+        this.stairs.position = new BABYLON.Vector3((lastRoom.x + lastRoom.w - 1.5) * this.gridSize, 0, (lastRoom.y + lastRoom.h - 1.5) * this.gridSize);
         this.stairs.isStairs = true;
 
         if (this.engine) this.engine.stopRenderLoop();
@@ -169,8 +192,8 @@ window.DungeonCrawler = {
         this.deathText = new BABYLON.GUI.TextBlock(); this.deathText.text = "YOU DIED"; this.deathText.color = "red"; this.deathText.fontSize = 80; this.deathText.isVisible = false; this.ui.addControl(this.deathText);
     },
 
-    createHealthBar: function(m) {
-        const r = new BABYLON.GUI.Rectangle(); r.width = "50px"; r.height = "8px"; r.background = "#444"; this.ui.addControl(r); r.linkWithMesh(m); r.linkOffsetY = -100; r.isVisible = false;
+    createHealthBar: function(m, offset = -100) {
+        const r = new BABYLON.GUI.Rectangle(); r.width = "50px"; r.height = "8px"; r.background = "#444"; this.ui.addControl(r); r.linkWithMesh(m); r.linkOffsetY = offset; r.isVisible = false;
         const i = new BABYLON.GUI.Rectangle(); i.width = "100%"; i.height = "100%"; i.background = "red"; i.horizontalAlignment = 0; r.addControl(i); m.healthBarUI = i; m.healthContainerUI = r;
     },
 
@@ -200,7 +223,12 @@ window.DungeonCrawler = {
                 if (BABYLON.Vector3.Distance(this.player.position, n.position) < 3 && BABYLON.Vector3.Dot(this.player.forward, n.position.subtract(this.player.position).normalize()) > 0.5) {
                     n.health -= dmg; n.healthContainerUI.isVisible = true; n.healthBarUI.width = (n.health/n.maxHealth*100) + "%";
                     n.moveWithCollisions(n.position.subtract(this.player.position).normalize().scale(0.6)); this.showDamageText("-" + dmg, n.position.clone(), "white");
-                    if (n.health <= 0) { this.addXP(n.maxHealth > 40 ? 40 : 15); this.entities = this.entities.filter(e => e !== n); n.healthContainerUI.dispose(); n.dispose(); }
+                    if (n.health <= 0) {
+                        if (n.isBoss) this.spawnBossChest(n.position.clone());
+                        this.addXP(n.isBoss ? 150 : (n.maxHealth > 40 ? 40 : 15));
+                        this.entities = this.entities.filter(e => e !== n);
+                        n.healthContainerUI.dispose(); n.dispose();
+                    }
                 }
             });
         }, 150);
@@ -215,13 +243,69 @@ window.DungeonCrawler = {
     handleNPCMovement: function () {
         const now = Date.now();
         this.entities.forEach(n => {
-            const ai = n.userData.ai; const dist = BABYLON.Vector3.Distance(n.position, this.player.position);
-            if (dist < 5.0) {
-                n.isMoving = false; n.rotation.y = BABYLON.Scalar.LerpAngle(n.rotation.y, Math.atan2(this.player.position.x - n.position.x, this.player.position.z - n.position.z), 0.1);
-                if (dist < 2.5 && (now - (ai.lastAtk || 0) > 3000)) { this.performSwing(n); ai.lastAtk = now; setTimeout(() => { if (BABYLON.Vector3.Distance(n.position, this.player.position) < 2.5) { this.player.health -= this.currentLevel; this.showDamageText("-" + this.currentLevel, this.player.position.clone(), "red"); } }, 250); }
+            const ai = n.userData.ai;
+            const dist = BABYLON.Vector3.Distance(n.position, this.player.position);
+            
+            // Aggro & Chase Logic
+            if (dist < 12.0) {
+                // Smoothly Rotate towards player
+                const targetRotation = Math.atan2(this.player.position.x - n.position.x, this.player.position.z - n.position.z);
+                n.rotation.y = BABYLON.Scalar.LerpAngle(n.rotation.y, targetRotation, 0.1);
+                
+                if (dist > 2.01) {
+                    // Chase if further than melee range
+                    n.isMoving = true;
+                    let moveDir = n.forward.clone();
+                    
+                    // Wall Recovery: If stuck, try sliding sideways
+                    if (ai.lastPos && BABYLON.Vector3.Distance(n.position, ai.lastPos) < 0.005) {
+                        ai.stuckCount++;
+                        if (ai.stuckCount > 10) {
+                            // Pivot move direction by 45 degrees to find a clear path
+                            const pivot = (n.uniqueId % 2 === 0 ? 1 : -1) * Math.PI / 4;
+                            moveDir = new BABYLON.Vector3(
+                                Math.sin(n.rotation.y + pivot),
+                                0,
+                                Math.cos(n.rotation.y + pivot)
+                            );
+                        }
+                    } else {
+                        ai.stuckCount = 0;
+                    }
+                    ai.lastPos = n.position.clone();
+                    n.moveWithCollisions(moveDir.scale(n.isBoss ? 0.08 : 0.06));
+                } else {
+                    n.isMoving = false;
+                    // Attack if in melee range
+                    if (now - (ai.lastAtk || 0) > 2500) {
+                        this.performSwing(n); ai.lastAtk = now;
+                        setTimeout(() => {
+                            if (BABYLON.Vector3.Distance(n.position, this.player.position) < 2.5) {
+                                const dmg = (n.isBoss ? this.currentLevel * 3 : this.currentLevel) + Math.floor(this.currentLevel/2);
+                                this.player.health -= dmg; this.showDamageText("-" + dmg, this.player.position.clone(), "red");
+                            }
+                        }, 250);
+                    }
+                }
             } else {
-                if (!ai.target) { if (ai.idle > 0) { ai.idle--; n.isMoving = false; } else { ai.target = new BABYLON.Vector3(n.position.x + (Math.random()-0.5)*10, 0, n.position.z + (Math.random()-0.5)*10); ai.lastPos = n.position.clone(); ai.stuckCount = 0; } }
-                else { const diff = ai.target.subtract(n.position); if (diff.length() < 0.5) { ai.target = null; ai.idle = 50 + Math.random()*100; } else { if (ai.lastPos && BABYLON.Vector3.Distance(n.position, ai.lastPos) < 0.01) { ai.stuckCount++; if (ai.stuckCount > 30) { ai.target = null; ai.idle = 10; return; } } else ai.stuckCount = 0; ai.lastPos = n.position.clone(); n.rotation.y = BABYLON.Scalar.LerpAngle(n.rotation.y, Math.atan2(diff.x, diff.z), 0.1); n.moveWithCollisions(n.forward.scale(0.05)); n.isMoving = true; } }
+                // Wandering Logic
+                if (!ai.target) {
+                    if (ai.idle > 0) { ai.idle--; n.isMoving = false; }
+                    else { ai.target = new BABYLON.Vector3(n.position.x + (Math.random()-0.5)*10, 0, n.position.z + (Math.random()-0.5)*10); ai.lastPos = n.position.clone(); ai.stuckCount = 0; }
+                } else {
+                    const diff = ai.target.subtract(n.position);
+                    if (diff.length() < 0.5) { ai.target = null; ai.idle = 50 + Math.random()*100; }
+                    else {
+                        if (ai.lastPos && BABYLON.Vector3.Distance(n.position, ai.lastPos) < 0.005) {
+                            ai.stuckCount++;
+                            if (ai.stuckCount > 30) { ai.target = null; ai.idle = 10; return; }
+                        } else ai.stuckCount = 0;
+                        ai.lastPos = n.position.clone();
+                        n.rotation.y = BABYLON.Scalar.LerpAngle(n.rotation.y, Math.atan2(diff.x, diff.z), 0.1);
+                        n.moveWithCollisions(n.forward.scale(0.04));
+                        n.isMoving = true;
+                    }
+                }
             }
         });
     },
@@ -229,10 +313,37 @@ window.DungeonCrawler = {
     handleInteractions: function () {
         this.chests.forEach(c => {
             if (BABYLON.Vector3.Distance(this.player.position, c.position) < 2 && !c.isOpen) {
-                c.isOpen = true; const lootGold = Math.floor(Math.random() * 30) + 20 * this.currentLevel; this.gold += lootGold; this.saveGame(); this.showDamageText("+" + lootGold + " GOLD", c.position.clone(), "gold");
-                const lid = c.getChildren().find(ch => ch.position.y > 0.5); if (lid) { const a = new BABYLON.Animation("o", "rotation.x", 30, 0, 0); a.setKeys([{frame:0, value:0}, {frame:15, value:-1.5}]); lid.animations = [a]; this.scene.beginAnimation(lid, 0, 15, false); }
+                c.isOpen = true;
+                if (c.isBossChest && this.dotnetRef) {
+                    this.dotnetRef.invokeMethodAsync("ClaimBossLoot", this.currentLevel);
+                } else {
+                    const lootGold = Math.floor(Math.random() * 30) + 20 * this.currentLevel;
+                    this.gold += lootGold; this.saveGame(); this.showDamageText("+" + lootGold + " GOLD", c.position.clone(), "gold");
+                }
+                const lid = c.getChildren().find(ch => ch.position.y > 0.5);
+                if (lid) {
+                    const a = new BABYLON.Animation("o", "rotation.x", 30, 0, 0);
+                    a.setKeys([{frame:0, value:0}, {frame:15, value:-1.5}]);
+                    lid.animations = [a]; this.scene.beginAnimation(lid, 0, 15, false);
+                }
             }
         });
+    },
+
+    spawnBossChest: async function (p) {
+        const c = await this.loadProp('data/chest.json', null);
+        c.position = p; c.isChest = true; c.isBossChest = true;
+        this.chests.push(c);
+        // Visual flair: Gold tint for boss chest
+        c.getChildMeshes().forEach(m => {
+            if (m.material) {
+                const mat = m.material.clone("gc");
+                mat.diffuseColor = new BABYLON.Color3(1, 0.84, 0); // Gold
+                mat.emissiveColor = new BABYLON.Color3(0.2, 0.1, 0);
+                m.material = mat;
+            }
+        });
+        this.showDamageText("BOSS DEFEATED! LOOT SPAWNED!", p, "gold");
     },
 
     showDescentDialog: function () {
@@ -258,8 +369,11 @@ window.DungeonCrawler = {
 
     generateDungeon: function (w, h) {
         const grid = Array(h).fill().map(() => Array(w).fill(1)), rooms = [];
-        for (let i = 0; i < 10; i++) {
-            const rw = Math.floor(Math.random() * 4) + 4, rh = Math.floor(Math.random() * 4) + 4;
+        const roomCount = 25;
+        for (let i = 0; i < roomCount; i++) {
+            const isBoss = (i === roomCount - 1);
+            const rw = isBoss ? 9 : Math.floor(Math.random() * 5) + 5;
+            const rh = isBoss ? 9 : Math.floor(Math.random() * 5) + 5;
             const rx = Math.floor(Math.random() * (w - rw - 2)) + 1, ry = Math.floor(Math.random() * (h - rh - 2)) + 1;
             if (!rooms.some(r => rx < r.x + r.w && rx + rw > r.x && ry < r.y + r.h && ry + rh > r.y)) { for (let y = ry; y < ry + rh; y++) for (let x = rx; x < rx + rw; x++) grid[y][x] = 0; rooms.push({ x: rx, y: ry, w: rw, h: rh }); }
         }
@@ -268,17 +382,41 @@ window.DungeonCrawler = {
             for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) { grid[y1][x] = 0; if (y1+1 < grid.length) grid[y1+1][x] = 0; }
             for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) { grid[y][x2] = 0; if (x2+1 < grid[0].length) grid[y][x2+1] = 0; }
         }
-        return { grid, rooms };
+        return { grid, rooms, bossRoom: rooms[rooms.length-1] };
     },
 
-    renderDungeon: function (g, s) {
+    renderDungeon: function (g, s, br) {
         const fMat = new BABYLON.StandardMaterial("f", this.scene); fMat.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.25);
         const wMat = new BABYLON.StandardMaterial("w", this.scene); wMat.diffuseColor = new BABYLON.Color3(0.4, 0.4, 0.45); wMat.bumpTexture = new BABYLON.Texture("https://www.babylonjs-playground.com/textures/rockn.png", this.scene);
-        for (let y = 0; y < g.length; y++) for (let x = 0; x < g[0].length; x++) {
-            const p = new BABYLON.Vector3(x * this.gridSize, 0, y * this.gridSize);
-            if (g[y][x] === 0) { const f = BABYLON.MeshBuilder.CreatePlane("f", { size: this.gridSize }, this.scene); f.rotation.x = Math.PI/2; f.position = p; f.material = fMat; f.checkCollisions = true; f.receiveShadows = true; }
-            else { const w = BABYLON.MeshBuilder.CreateBox("w", { size: this.gridSize, height: 2.5 }, this.scene); w.position = p.add(new BABYLON.Vector3(0, 1.25, 0)); w.material = wMat; w.checkCollisions = true; s.addShadowCaster(w); }
+        
+        const bWMat = new BABYLON.StandardMaterial("bw", this.scene); bWMat.diffuseColor = new BABYLON.Color3(0.1, 0.05, 0.05); bWMat.specularColor = new BABYLON.Color3(0.4, 0, 0);
+        const bFMat = new BABYLON.StandardMaterial("bf", this.scene); bFMat.diffuseColor = new BABYLON.Color3(0.05, 0.05, 0.08);
+
+        let floors = [], walls = [], bFloors = [], bWalls = [];
+        for (let y = 0; y < g.length; y++) {
+            for (let x = 0; x < g[0].length; x++) {
+                const p = new BABYLON.Vector3(x * this.gridSize, 0, y * this.gridSize);
+                const isBR = br && x >= br.x && x < br.x + br.w && y >= br.y && y < br.y + br.h;
+                if (g[y][x] === 0) {
+                    const f = BABYLON.MeshBuilder.CreatePlane("f", { size: this.gridSize }, this.scene);
+                    f.rotation.x = Math.PI / 2; f.position = p; (isBR ? bFloors : floors).push(f);
+                } else {
+                    const w = BABYLON.MeshBuilder.CreateBox("w", { size: this.gridSize, height: 2.5 }, this.scene);
+                    w.position = p.add(new BABYLON.Vector3(0, 1.25, 0)); (isBR ? bWalls : walls).push(w);
+                }
+            }
         }
+
+        const merge = (list, mat, shad, collisions) => {
+            if (list.length > 0) {
+                const m = BABYLON.Mesh.MergeMeshes(list, true, true, undefined, false, true);
+                m.material = mat; if(shad) shad.addShadowCaster(m); m.checkCollisions = collisions;
+                if(mat === fMat || mat === bFMat) m.receiveShadows = true; return m;
+            }
+        };
+
+        merge(floors, fMat, null, true); merge(walls, wMat, s, true);
+        merge(bFloors, bFMat, null, true); merge(bWalls, bWMat, s, true);
     },
 
     handlePlayerMovement: function () {
