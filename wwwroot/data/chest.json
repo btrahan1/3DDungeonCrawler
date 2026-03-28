@@ -1,0 +1,56 @@
+{
+  "Name": "Treasure Chest",
+  "Type": "Procedural",
+  "Parts": [
+    {
+      "Id": "base",
+      "Shape": "Box",
+      "Position": [0, 0.25, 0],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.8, 0.5, 0.5],
+      "ColorHex": "#4E362A",
+      "Material": "Wood",
+      "Operation": "Union"
+    },
+    {
+      "Id": "trim_l",
+      "Shape": "Box",
+      "Position": [-0.35, 0.25, 0],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.1, 0.52, 0.52],
+      "ColorHex": "#C5B358",
+      "Material": "Metal",
+      "Operation": "Union"
+    },
+    {
+      "Id": "trim_r",
+      "Shape": "Box",
+      "Position": [0.35, 0.25, 0],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.1, 0.52, 0.52],
+      "ColorHex": "#C5B358",
+      "Material": "Metal",
+      "Operation": "Union"
+    },
+    {
+      "Id": "lid",
+      "Shape": "Box",
+      "Position": [0, 0.55, 0],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.82, 0.2, 0.52],
+      "ColorHex": "#4E362A",
+      "Material": "Wood",
+      "Operation": "Union"
+    },
+    {
+      "Id": "lock",
+      "Shape": "Box",
+      "Position": [0, 0.45, 0.26],
+      "Rotation": [0, 0, 0],
+      "Scale": [0.12, 0.12, 0.05],
+      "ColorHex": "#C5B358",
+      "Material": "Metal",
+      "Operation": "Union"
+    }
+  ]
+}
