@@ -344,5 +344,118 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         } else {
             this.showDamageText("ALREADY FULL", this.player.position.clone(), "white");
         }
+    },
+
+    getGridPath: function(startPos, endPos) {
+        if (!this.dungeonData || !this.dungeonData.grid) return [];
+        const grid = this.dungeonData.grid;
+        const gridW = grid[0].length, gridH = grid.length;
+        const startX = Math.round(startPos.x / this.gridSize), startY = Math.round(startPos.z / this.gridSize);
+        const endX = Math.round(endPos.x / this.gridSize), endY = Math.round(endPos.z / this.gridSize);
+
+        if (startX === endX && startY === endY) return [];
+
+        const openSet = [{ x: startX, y: startY, g: 0, h: Math.abs(startX - endX) + Math.abs(startY - endY), f: 0, parent: null }];
+        const closedSet = new Set();
+        
+        while (openSet.length > 0) {
+            openSet.sort((a, b) => a.f - b.f);
+            const current = openSet.shift();
+            if (current.x === endX && current.y === endY) {
+                const path = []; let temp = current;
+                while (temp.parent) { path.push(new BABYLON.Vector3(temp.x * this.gridSize, 0.1, temp.y * this.gridSize)); temp = temp.parent; }
+                return path.reverse();
+            }
+            closedSet.add(`${current.x},${current.y}`);
+            for (let [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+                const nx = current.x + dx, ny = current.y + dy;
+                if (nx < 0 || ny < 0 || nx >= gridW || ny >= gridH || grid[ny][nx] === 1 || closedSet.has(`${nx},${ny}`)) continue;
+                const g = current.g + 1;
+                const h = Math.abs(nx - endX) + Math.abs(ny - endY);
+                const neighbor = { x: nx, y: ny, g, h, f: g + h, parent: current };
+                const existing = openSet.find(o => o.x === nx && o.y === ny);
+                if (!existing) openSet.push(neighbor);
+                else if (g < existing.g) { existing.g = g; existing.f = g + h; existing.parent = current; }
+            }
+            if (closedSet.size > 5000) break; // Safety limit
+        }
+        return [];
+    },
+
+    findNextAutoPlayTarget: function() {
+        // Priority: Living Enemies > Unopened Chests
+        let targets = this.entities.filter(e => e.isNPC && e.health > 0);
+        if (targets.length === 0) {
+            targets = this.chests.filter(c => !c.isOpen);
+        }
+        if (targets.length === 0) return null;
+        
+        // Sort by distance
+        targets.sort((a, b) => BABYLON.Vector3.Distance(this.player.position, a.position) - BABYLON.Vector3.Distance(this.player.position, b.position));
+        return targets[0];
+    },
+
+    handleAutoPlay: function() {
+        if (!this.isAutoPlayActive || this.isDead || !this.player) return;
+
+        // 1. Target Acquisition
+        if (!this.autoPlayTarget || 
+            (this.autoPlayTarget.isNPC && this.autoPlayTarget.health <= 0) || 
+            (this.autoPlayTarget.isChest && this.autoPlayTarget.isOpen)) {
+            this.autoPlayTarget = this.findNextAutoPlayTarget();
+            this.autoPlayPath = [];
+            if (!this.autoPlayTarget) {
+                this.isAutoPlayActive = false;
+                this.showDamageText("ALL CLEAR!", this.player.position.clone(), "gold");
+                this.promptText.text = "";
+                if (this.initAutoToggle) this.initAutoToggle();
+                return;
+            }
+        }
+        
+        this.promptText.text = "AUTO-PLAYING: TARGETING " + (this.autoPlayTarget.isNPC ? "ENEMY" : "CHEST");
+
+        // 2. Pathfinding
+        const dist = BABYLON.Vector3.Distance(this.player.position, this.autoPlayTarget.position);
+        
+        // If it's an enemy, we want to be close enough to attack
+        const interactDist = this.autoPlayTarget.isNPC ? 2.5 : 1.8;
+
+        if (dist <= interactDist) {
+            // Face target
+            const dir = this.autoPlayTarget.position.subtract(this.player.position);
+            this.player.rotation.y = Math.atan2(dir.x, dir.z);
+            
+            if (this.autoPlayTarget.isNPC) {
+                if (!this.player.isSwinging) this.handlePlayerAttack();
+            } else if (this.autoPlayTarget.isChest) {
+                this.handleInteractions();
+            }
+            return;
+        }
+
+        // 3. Movement
+        if (this.autoPlayPath.length === 0) {
+             this.autoPlayPath = this.getGridPath(this.player.position, this.autoPlayTarget.position);
+             if (this.autoPlayPath.length === 0 && dist > interactDist) {
+                 // No path found
+                 this.isAutoPlayActive = false;
+                 this.showDamageText("PATH BLOCKED", this.player.position.clone(), "red");
+                 if (this.initAutoToggle) this.initAutoToggle();
+                 return;
+             }
+        }
+
+        if (this.autoPlayPath.length > 0) {
+            const nextPoint = this.autoPlayPath[0];
+            const toNext = nextPoint.subtract(this.player.position);
+            if (toNext.length() < 0.5) {
+                this.autoPlayPath.shift();
+            } else {
+                this.player.rotation.y = Math.atan2(toNext.x, toNext.z);
+                this.player.moveWithCollisions(this.player.forward.scale(0.12));
+                this.player.isMoving = true;
+            }
+        }
     }
 });

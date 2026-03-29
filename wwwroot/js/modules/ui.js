@@ -59,6 +59,8 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         this.stPotionCount = createPotionIcon("2", "#d4af37");
         this.mpPotionCount = createPotionIcon("3", "#1e90ff");
         this.rePotionCount = createPotionIcon("4", "#9932cc");
+        
+        this.initAutoToggle();
     },
 
     createHealthBar: function(m, offset = -100) {
@@ -79,6 +81,7 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         let p = "";
         this.chests.forEach(c => { if (BABYLON.Vector3.Distance(this.player.position, c.position) < 2 && !c.isOpen) p = "PRESS [E] TO OPEN CHEST"; });
         if (this.stairs && BABYLON.Vector3.Distance(this.player.position, this.stairs.position) < 3) p = "CLICK STAIRS TO DESCEND";
+        if (this.isAutoPlayActive && !p) p = "AUTO-PLAY ACTIVE: " + (this.autoPlayTarget ? (this.autoPlayTarget.isNPC ? "TARGETING ENEMY" : "TARGETING CHEST") : "SEARCHING...");
         this.promptText.text = p;
         if (this.player.health <= 0) { this.isDead = true; this.deathText.isVisible = true; setTimeout(() => { if (this.dotnetRef) this.dotnetRef.invokeMethodAsync("ToggleESCMenu"); }, 2000); }
     },
@@ -129,5 +132,36 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         if (this.learnedAbilities.includes("Shield")) {
             createBtn("SHIELD", "F", "#4682b4", () => this.handleShieldSpell());
         }
+    },
+
+    initAutoToggle: function() {
+        if (this.autoToggleContainer) this.autoToggleContainer.dispose();
+        
+        const autoStack = new BABYLON.GUI.StackPanel(); 
+        autoStack.width = "160px"; autoStack.height = "60px";
+        autoStack.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT; 
+        autoStack.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP; 
+        autoStack.top = "20px"; autoStack.right = "-20px";
+        this.ui.addControl(autoStack);
+        this.autoToggleContainer = autoStack;
+
+        const autoBtn = BABYLON.GUI.Button.CreateSimpleButton("btnAuto", this.isAutoPlayActive ? "AUTO: ON [P]" : "AUTO-PLAY [P]");
+        autoBtn.width = "140px"; autoBtn.height = "40px"; autoBtn.color = "white"; 
+        autoBtn.background = this.isAutoPlayActive ? "#ffa500" : "#444";
+        autoBtn.fontFamily = "MedievalSharp"; autoBtn.cornerRadius = 8; autoBtn.thickness = 3;
+        autoBtn.isPointerBlocker = true;
+        
+        autoBtn.onPointerDownObservable.add(() => {
+            this.isAutoPlayActive = !this.isAutoPlayActive;
+            console.log("Auto-Play Toggled (Button):", this.isAutoPlayActive);
+            const label = this.isAutoPlayActive ? "AUTO: ON [P]" : "AUTO-PLAY [P]";
+            if (autoBtn.textBlock) autoBtn.textBlock.text = label;
+            autoBtn.background = this.isAutoPlayActive ? "#ffa500" : "#444";
+            if (!this.isAutoPlayActive) { 
+                this.autoPlayTarget = null; this.autoPlayPath = []; 
+                this.promptText.text = "";
+            }
+        });
+        autoStack.addControl(autoBtn);
     }
 });

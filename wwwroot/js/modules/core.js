@@ -2,7 +2,8 @@ window.DungeonCrawler = {
     canvas: null, engine: null, scene: null, camera: null, player: null, ui: null, lastState: null,
     inputMap: {}, entities: [], chests: [], stairs: null, projectiles: [],
     dungeonSize: 60, gridSize: 2.5, currentLevel: 1, dotnetRef: null,
-    isTransitioning: false, isDead: false,
+    isTransitioning: false, isDead: false, isAutoPlayActive: false,
+    autoPlayTarget: null, autoPlayPath: [],
     xp: 0, level: 1, xpToNext: 100, gold: 0, maxHealth: 100, bonusDmg: 0,
     playerClass: "WARRIOR", attributes: { wisdom: 10 },
     potions: { hp: 0, st: 0, mp: 0, rest: 0 },
@@ -73,6 +74,16 @@ window.DungeonCrawler = {
             const key = kbInfo.event.key.toLowerCase();
             if (kbInfo.type === BABYLON.KeyboardEventTypes.KEYDOWN) {
                 this.inputMap[key] = true;
+                
+                // Manual Override for attacks/skills
+                if ([" ", "q", "r", "f"].includes(key) && this.isAutoPlayActive) {
+                    this.isAutoPlayActive = false;
+                    this.autoPlayTarget = null;
+                    this.autoPlayPath = [];
+                    if (this.initAutoToggle) this.initAutoToggle();
+                    this.showDamageText("AUTO-PLAY OFF", this.player.position.clone(), "#aaa");
+                }
+
                 if (key === " " && !this.isDead) this.handlePlayerAttack();
                 if (key === "q" && !this.isDead && (this.learnedAbilities.includes("Heal") || this.playerClass === "HEALER")) this.handleHealSpell();
                 if (key === "r" && !this.isDead && this.learnedAbilities.includes("Power Strike")) this.handlePowerStrike();
@@ -82,6 +93,12 @@ window.DungeonCrawler = {
                 if (key === "3" && !this.isDead) this.handleUsePotion("mp");
                 if (key === "4" && !this.isDead) this.handleUsePotion("rest");
                 if (key === "e" && !this.isDead) this.handleInteractions();
+                if (key === "p" && !this.isDead) {
+                    this.isAutoPlayActive = !this.isAutoPlayActive;
+                    this.showDamageText("AUTO: " + (this.isAutoPlayActive ? "ON" : "OFF"), this.player.position.clone(), "orange");
+                    if (!this.isAutoPlayActive) { this.autoPlayTarget = null; this.autoPlayPath = []; this.promptText.text = ""; }
+                    if (this.initAutoToggle) this.initAutoToggle();
+                }
                 if (key === "escape") {
                     if (this.dotnetRef) this.dotnetRef.invokeMethodAsync("OnPause");
                     this.inputMap["escape"] = false;
@@ -96,11 +113,11 @@ window.DungeonCrawler = {
             }
         };
 
-        const dungeonData = this.generateDungeon(this.dungeonSize, this.dungeonSize);
-        this.renderDungeon(dungeonData.grid, shadowGen, dungeonData.bossRoom);
+        this.dungeonData = this.generateDungeon(this.dungeonSize, this.dungeonSize);
+        this.renderDungeon(this.dungeonData.grid, shadowGen, this.dungeonData.bossRoom);
 
-        if (dungeonData.bossRoom) {
-            const br = dungeonData.bossRoom;
+        if (this.dungeonData.bossRoom) {
+            const br = this.dungeonData.bossRoom;
             const bLight = new BABYLON.PointLight("bossLight", new BABYLON.Vector3((br.x + br.w/2) * this.gridSize, 2, (br.y + br.h/2) * this.gridSize), this.scene);
             bLight.diffuse = new BABYLON.Color3(0.8, 0.1, 0.1); bLight.intensity = 1.0; bLight.range = 15;
         }
@@ -119,14 +136,14 @@ window.DungeonCrawler = {
             };
             this.player = await this.loadVoxelModel(await res.json(), shadowGen, eMap);
             this.player.health = this.maxHealth;
-            this.player.position = new BABYLON.Vector3(dungeonData.rooms[0].x * this.gridSize, 0.1, dungeonData.rooms[0].y * this.gridSize);
+            this.player.position = new BABYLON.Vector3(this.dungeonData.rooms[0].x * this.gridSize, 0.1, this.dungeonData.rooms[0].y * this.gridSize);
             this.camera.setTarget(this.player);
         } catch (e) { console.error(e); }
 
         let potionChestSpawned = false;
-        for (let i = 1; i < dungeonData.rooms.length; i++) {
-            const room = dungeonData.rooms[i];
-            const isBossRoom = (i === dungeonData.rooms.length - 1);
+        for (let i = 1; i < this.dungeonData.rooms.length; i++) {
+            const room = this.dungeonData.rooms[i];
+            const isBossRoom = (i === this.dungeonData.rooms.length - 1);
             if (isBossRoom || Math.random() > 0.6) {
                 const isG = Math.random() > 0.4;
                 const resN = await fetch(isG ? 'data/goblin.json' : 'data/orc.json');
@@ -138,7 +155,7 @@ window.DungeonCrawler = {
             }
 
             if (!isBossRoom) {
-                if (!potionChestSpawned && (Math.random() > 0.4 || i === dungeonData.rooms.length - 2)) {
+                if (!potionChestSpawned && (Math.random() > 0.4 || i === this.dungeonData.rooms.length - 2)) {
                     const chest = await this.loadProp('data/chest.json', shadowGen);
                     chest.position = new BABYLON.Vector3((room.x+1)*this.gridSize, 0, (room.y+1)*this.gridSize);
                     chest.isChest = true; chest.isPotionChest = true; this.chests.push(chest);
@@ -152,7 +169,7 @@ window.DungeonCrawler = {
             }
         }
 
-        const lastRoom = dungeonData.rooms[dungeonData.rooms.length - 1];
+        const lastRoom = this.dungeonData.rooms[this.dungeonData.rooms.length - 1];
         this.stairs = await this.loadProp('data/stairs.json', shadowGen);
         this.stairs.position = new BABYLON.Vector3((lastRoom.x + lastRoom.w - 1.5) * this.gridSize, 0, (lastRoom.y + lastRoom.h - 1.5) * this.gridSize);
         this.stairs.isStairs = true;
@@ -160,6 +177,7 @@ window.DungeonCrawler = {
         if (this.engine) this.engine.stopRenderLoop();
         this.engine.runRenderLoop(() => {
             if (this.player && !this.scene.isPaused && !this.isDead) {
+                if (this.isAutoPlayActive) this.handleAutoPlay();
                 this.handlePlayerMovement();
                 this.handleNPCMovement();
                 this.updateProjectiles();
@@ -228,6 +246,18 @@ window.DungeonCrawler = {
 
     handlePlayerMovement: function () {
         if (!this.player) return; let mov = false;
+        
+        // Manual Override: Turn off Auto-Play if any movement key is pressed
+        if (this.inputMap["w"] || this.inputMap["s"] || this.inputMap["a"] || this.inputMap["d"]) {
+            if (this.isAutoPlayActive) {
+                this.isAutoPlayActive = false;
+                this.autoPlayTarget = null;
+                this.autoPlayPath = [];
+                if (this.initAutoToggle) this.initAutoToggle();
+                this.showDamageText("AUTO-PLAY OFF", this.player.position.clone(), "#aaa");
+            }
+        }
+
         if (this.inputMap["w"]) { this.player.moveWithCollisions(this.player.forward.scale(0.12)); mov = true; }
         if (this.inputMap["s"]) { this.player.moveWithCollisions(this.player.forward.scale(-0.06)); mov = true; }
         if (this.inputMap["a"]) this.player.rotation.y -= 0.025; if (this.inputMap["d"]) this.player.rotation.y += 0.025;
