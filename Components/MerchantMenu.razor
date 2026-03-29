@@ -19,8 +19,20 @@
             {
                 <div class="tab-content">
                     <div class="shop-item">
-                        <div class="item-info">HEALING POTION</div>
-                        <button class="btn-buy" @onclick="State.BuyHeal" disabled="@(State.SaveData?.Gold < 25)">25G</button>
+                        <div class="item-info">HP POTION (FULL HP)</div>
+                        <button class="btn-buy" @onclick="State.BuyHealthPotion" disabled="@(State.SaveData?.Gold < 30)">30G</button>
+                    </div>
+                    <div class="shop-item">
+                        <div class="item-info">ST POTION (FULL STA)</div>
+                        <button class="btn-buy" @onclick="State.BuyStaminaPotion" disabled="@(State.SaveData?.Gold < 25)">25G</button>
+                    </div>
+                    <div class="shop-item">
+                        <div class="item-info">MP POTION (FULL MANA)</div>
+                        <button class="btn-buy" @onclick="State.BuyManaPotion" disabled="@(State.SaveData?.Gold < 25)">25G</button>
+                    </div>
+                    <div class="shop-item">
+                        <div class="item-info">REST POTION (ALL FULL)</div>
+                        <button class="btn-buy" @onclick="State.BuyRestorationPotion" disabled="@(State.SaveData?.Gold < 100)">100G</button>
                     </div>
                     <div class="shop-item">
                         <div class="item-info">IRON HELMET (+2 DEF)</div>

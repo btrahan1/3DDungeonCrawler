@@ -5,6 +5,7 @@ window.DungeonCrawler = {
     isTransitioning: false, isDead: false,
     xp: 0, level: 1, xpToNext: 100, gold: 0, maxHealth: 100, bonusDmg: 0,
     playerClass: "WARRIOR", attributes: { wisdom: 10 },
+    potions: { hp: 0, st: 0, mp: 0, rest: 0 },
     equipment: {}, inventory: [],
 
     init: async function (canvasId, dotnetRef, savedData) {
@@ -34,11 +35,12 @@ window.DungeonCrawler = {
                 charisma: savedData.charisma || 10
             };
             this.playerClass = savedData.class || "WARRIOR";
+            this.potions = { hp: savedData.healthPotions || 0, st: savedData.staminaPotions || 0, mp: savedData.manaPotions || 0, rest: savedData.restorationPotions || 0 };
             this.equipment = savedData.equipment || {};
             this.inventory = savedData.inventory || [];
             this.xpToNext = this.level * 100;
         } else if (!this.engine) {
-            this.xp = 0; this.level = 1; this.gold = 0; this.currentLevel = 1; this.maxHealth = 100; this.bonusDmg = 0; this.xpToNext = 100; this.playerClass = "WARRIOR"; this.attributes = { wisdom: 10 }; this.equipment = {}; this.inventory = [];
+            this.xp = 0; this.level = 1; this.gold = 0; this.currentLevel = 1; this.maxHealth = 100; this.bonusDmg = 0; this.xpToNext = 100; this.playerClass = "WARRIOR"; this.attributes = { wisdom: 10 }; this.potions = { hp: 0, st: 0, mp: 0, rest: 0 }; this.equipment = {}; this.inventory = [];
         }
 
         this.isTransitioning = false; this.isDead = false;
@@ -69,6 +71,10 @@ window.DungeonCrawler = {
                 this.inputMap[key] = true;
                 if (key === " " && !this.isDead) this.handlePlayerAttack();
                 if (key === "q" && !this.isDead && this.playerClass === "HEALER") this.handleHealSpell();
+                if (key === "1" && !this.isDead) this.handleUsePotion("hp");
+                if (key === "2" && !this.isDead) this.handleUsePotion("st");
+                if (key === "3" && !this.isDead) this.handleUsePotion("mp");
+                if (key === "4" && !this.isDead) this.handleUsePotion("rest");
                 if (key === "e" && !this.isDead) this.handleInteractions();
                 if (key === "escape") {
                     if (this.dotnetRef) this.dotnetRef.invokeMethodAsync("OnPause");
@@ -160,6 +166,7 @@ window.DungeonCrawler = {
             this.maxMana = savedData.maxMana || 50;
             this.xpToNext = this.level * 100;
             this.equipment = savedData.equipment || {};
+            this.potions = { hp: savedData.healthPotions || 0, st: savedData.staminaPotions || 0, mp: savedData.manaPotions || 0, rest: savedData.restorationPotions || 0 };
             if (this.player && this.player.health > this.maxHealth) this.player.health = this.maxHealth;
             console.log("Game state synced from .NET:", savedData);
         }

@@ -29,6 +29,40 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         this.goldText = new BABYLON.GUI.TextBlock(); this.goldText.text = "💰 " + this.gold; this.goldText.color = "#FFD700"; this.goldText.height = "40px"; this.goldText.fontSize = 20; this.goldText.textHorizontalAlignment = 0; this.goldText.fontFamily = "MedievalSharp"; stack.addControl(this.goldText);
         this.promptText = new BABYLON.GUI.TextBlock(); this.promptText.text = ""; this.promptText.color = "yellow"; this.promptText.fontSize = 24; this.promptText.fontFamily = "MedievalSharp"; this.ui.addControl(this.promptText);
         this.deathText = new BABYLON.GUI.TextBlock(); this.deathText.text = "YOU DIED"; this.deathText.color = "red"; this.deathText.fontSize = 80; this.deathText.fontFamily = "Almendra SC"; this.deathText.isVisible = false; this.ui.addControl(this.deathText);
+        
+        const potionStack = new BABYLON.GUI.StackPanel();
+        potionStack.isVertical = false;
+        potionStack.height = "45px";
+        potionStack.width = "200px";
+        potionStack.horizontalAlignment = 0;
+        potionStack.top = "5px";
+        stack.addControl(potionStack);
+
+        const createPotionIcon = (key, color) => {
+            const container = new BABYLON.GUI.Rectangle();
+            container.width = "40px"; container.height = "45px"; container.thickness = 0; container.paddingRight = "8px";
+            
+            const bottle = new BABYLON.GUI.Ellipse();
+            bottle.width = "30px"; bottle.height = "30px"; bottle.background = color; bottle.thickness = 2; bottle.color = "white";
+            bottle.shadowBlur = 5; bottle.shadowColor = "black";
+            container.addControl(bottle);
+
+            const countText = new BABYLON.GUI.TextBlock();
+            countText.text = "0"; countText.color = "white"; countText.fontSize = 14; countText.fontWeight = "bold";
+            bottle.addControl(countText);
+
+            const keyLabel = new BABYLON.GUI.TextBlock();
+            keyLabel.text = key; keyLabel.color = "#ccc"; keyLabel.fontSize = 10; keyLabel.verticalAlignment = 1; keyLabel.top = "15px"; keyLabel.fontFamily = "MedievalSharp";
+            container.addControl(keyLabel);
+
+            potionStack.addControl(container);
+            return countText;
+        };
+
+        this.hpPotionCount = createPotionIcon("1", "#cd1d1d");
+        this.stPotionCount = createPotionIcon("2", "#d4af37");
+        this.mpPotionCount = createPotionIcon("3", "#1e90ff");
+        this.rePotionCount = createPotionIcon("4", "#9932cc");
     },
 
     createHealthBar: function(m, offset = -100) {
@@ -42,6 +76,10 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         this.mBar.maximum = this.maxMana || 100; this.mBar.value = this.mana;
         this.xBar.maximum = this.xpToNext; this.xBar.value = this.xp;
         this.goldText.text = "💰 " + this.gold; this.nameText.text = "LVL " + this.level + " - " + this.playerClass + " (Floor " + this.currentLevel + ")";
+        this.hpPotionCount.text = this.potions.hp.toString();
+        this.stPotionCount.text = this.potions.st.toString();
+        this.mpPotionCount.text = this.potions.mp.toString();
+        this.rePotionCount.text = this.potions.rest.toString();
         let p = "";
         this.chests.forEach(c => { if (BABYLON.Vector3.Distance(this.player.position, c.position) < 2 && !c.isOpen) p = "PRESS [E] TO OPEN CHEST"; });
         if (this.stairs && BABYLON.Vector3.Distance(this.player.position, this.stairs.position) < 3) p = "CLICK STAIRS TO DESCEND";

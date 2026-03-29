@@ -227,5 +227,59 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         }
         
         this.updateHUD();
+    },
+
+    handleUsePotion: function (type) {
+        if (this.isDead) return;
+        if (this.potions[type] <= 0) {
+            this.showDamageText("OUT OF POTIONS", this.player.position.clone(), "#ff4444");
+            return;
+        }
+
+        let healed = false;
+        let color = "#ffffff";
+        let msg = "";
+
+        if (type === "hp") {
+            if (this.player.health < this.maxHealth) {
+                this.player.health = this.maxHealth;
+                msg = "FULL HP"; color = "#ff4444"; healed = true;
+            }
+        } else if (type === "st") {
+            if (this.stamina < this.maxStamina) {
+                this.stamina = this.maxStamina;
+                msg = "FULL STA"; color = "#ffd700"; healed = true;
+            }
+        } else if (type === "mp") {
+            if (this.mana < this.maxMana) {
+                this.mana = this.maxMana;
+                msg = "FULL MANA"; color = "#1e90ff"; healed = true;
+            }
+        } else if (type === "rest") {
+            this.player.health = this.maxHealth;
+            this.stamina = this.maxStamina;
+            this.mana = this.maxMana;
+            msg = "RESTORATION"; color = "#e040fb"; healed = true;
+        }
+
+        if (healed) {
+            this.potions[type]--;
+            this.showDamageText(msg, this.player.position.clone(), color);
+            if (this.dotnetRef) this.dotnetRef.invokeMethodAsync("UsePotion", type);
+            
+            if (this.player.getChildMeshes) {
+                const flashColor = BABYLON.Color3.FromHexString(color);
+                this.player.getChildMeshes().forEach(m => {
+                    if (m.material) {
+                        const oldEmissive = m.material.emissiveColor?.clone() || new BABYLON.Color3(0,0,0);
+                        m.material.emissiveColor = flashColor.scale(0.5);
+                        setTimeout(() => m.material.emissiveColor = oldEmissive, 300);
+                    }
+                });
+            }
+            this.updateHUD();
+        } else {
+            this.showDamageText("ALREADY FULL", this.player.position.clone(), "white");
+        }
     }
 });

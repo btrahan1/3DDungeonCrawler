@@ -284,13 +284,22 @@ namespace _3DDungeonCrawler.Services
             }
         }
 
-        public async Task BuyHeal()
+        public async Task BuyHealthPotion() { if (SaveData != null && SaveData.Gold >= 30) { SaveData.Gold -= 30; SaveData.HealthPotions++; await UpdateAndSave(); } }
+        public async Task BuyStaminaPotion() { if (SaveData != null && SaveData.Gold >= 25) { SaveData.Gold -= 25; SaveData.StaminaPotions++; await UpdateAndSave(); } }
+        public async Task BuyManaPotion() { if (SaveData != null && SaveData.Gold >= 25) { SaveData.Gold -= 25; SaveData.ManaPotions++; await UpdateAndSave(); } }
+        public async Task BuyRestorationPotion() { if (SaveData != null && SaveData.Gold >= 100) { SaveData.Gold -= 100; SaveData.RestorationPotions++; await UpdateAndSave(); } }
+
+        [Microsoft.JSInterop.JSInvokable]
+        public async Task UsePotion(string type)
         {
-            if (SaveData != null && SaveData.Gold >= 25) {
-                SaveData.Gold -= 25;
-                // Healing handled by the engine normally, but we deduct gold here.
-                await UpdateAndSave();
+            if (SaveData == null) return;
+            switch(type.ToLower()) {
+                case "hp": if (SaveData.HealthPotions > 0) SaveData.HealthPotions--; break;
+                case "st": if (SaveData.StaminaPotions > 0) SaveData.StaminaPotions--; break;
+                case "mp": if (SaveData.ManaPotions > 0) SaveData.ManaPotions--; break;
+                case "rest": if (SaveData.RestorationPotions > 0) SaveData.RestorationPotions--; break;
             }
+            await UpdateAndSave();
         }
 
         public async Task BuyStrength()

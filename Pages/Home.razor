@@ -100,6 +100,12 @@
     }
 
     [JSInvokable]
+    public async Task UsePotion(string type)
+    {
+        await State.UsePotion(type);
+    }
+
+    [JSInvokable]
     public void ToggleESCMenu()
     {
         if (State.CurrentState == GameState.Playing) State.CurrentState = GameState.ESCMenu;

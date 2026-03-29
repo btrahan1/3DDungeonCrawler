@@ -21,6 +21,11 @@ namespace _3DDungeonCrawler.Models
         public int MaxMana { get; set; } = 50;
 
         public int UnassignedStats { get; set; } = 0;
+        
+        public int HealthPotions { get; set; } = 0;
+        public int StaminaPotions { get; set; } = 0;
+        public int ManaPotions { get; set; } = 0;
+        public int RestorationPotions { get; set; } = 0;
 
         // Core Attributes (Base 10)
         public int Strength { get; set; } = 10;
