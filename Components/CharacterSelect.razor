@@ -29,13 +29,15 @@
                             <input @bind="newName" placeholder="NAME..." maxlength="12" />
                             <select @bind="selectedClass" class="char-select-dropdown">
                                 <option value="WARRIOR">WARRIOR</option>
-                                <option value="MAGE">MAGE (SOON)</option>
-                                <option value="ROGUE">ROGUE (SOON)</option>
+                                <option value="MAGE">MAGE</option>
+                                <option value="SCOUT">SCOUT</option>
+                                <option value="HEALER">HEALER</option>
                             </select>
                             <select @bind="selectedRace" class="char-select-dropdown">
                                 <option value="HUMAN">HUMAN</option>
-                                <option value="ELF">ELF (+DMG)</option>
-                                <option value="DWARF">DWARF (+HP)</option>
+                                <option value="ELF">ELF</option>
+                                <option value="DWARF">DWARF</option>
+                                <option value="GNOME">GNOME</option>
                             </select>
                             <button class="btn-slot btn-create" @onclick="() => CreateHero(slotIndex)">CREATE</button>
                         </div>

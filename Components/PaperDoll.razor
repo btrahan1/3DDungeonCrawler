@@ -6,6 +6,36 @@
         <canvas id="portraitCanvas"></canvas>
     </div>
     <div class="stats-panel">
+        <div class="stat-header">-- RESOURCES --</div>
+        <div class="resource-row">
+            <div class="resource-label">HP: @(State.SaveData?.MaxHealth ?? 100) / @(State.SaveData?.MaxHealth ?? 100)</div>
+            <div class="resource-bar hp-bar" style="width: 100%"></div>
+        </div>
+        <div class="resource-row">
+            <div class="resource-label">STA: @(State.SaveData?.Stamina ?? 50) / @(State.SaveData?.MaxStamina ?? 50)</div>
+            @{ var sPct = (State.SaveData?.MaxStamina > 0) ? (State.SaveData.Stamina * 100 / State.SaveData.MaxStamina) : 0; }
+            <div class="resource-bar sta-bar" style="width: @(sPct)%"></div>
+        </div>
+        <div class="resource-row">
+            <div class="resource-label">MANA: @(State.SaveData?.Mana ?? 50) / @(State.SaveData?.MaxMana ?? 50)</div>
+            @{ var mPct = (State.SaveData?.MaxMana > 0) ? (State.SaveData.Mana * 100 / State.SaveData.MaxMana) : 0; }
+            <div class="resource-bar mana-bar" style="width: @(mPct)%"></div>
+        </div>
+
+        <div class="stat-header" style="margin-top: 15px;">-- ATTRIBUTES @(State.SaveData?.UnassignedStats > 0 ? $"({State.SaveData.UnassignedStats} pts)" : "") --</div>
+        <div class="stat-row">
+            <span class="stat-item">STR: @(State.SaveData?.Strength ?? 10) @if(State.SaveData?.UnassignedStats > 0){<button class="btn-add-stat" @onclick='() => State.AssignStat("str")'>+</button>}</span>
+            <span class="stat-item">INT: @(State.SaveData?.Intelligence ?? 10) @if(State.SaveData?.UnassignedStats > 0){<button class="btn-add-stat" @onclick='() => State.AssignStat("int")'>+</button>}</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-item">DEX: @(State.SaveData?.Dexterity ?? 10) @if(State.SaveData?.UnassignedStats > 0){<button class="btn-add-stat" @onclick='() => State.AssignStat("dex")'>+</button>}</span>
+            <span class="stat-item">WIS: @(State.SaveData?.Wisdom ?? 10) @if(State.SaveData?.UnassignedStats > 0){<button class="btn-add-stat" @onclick='() => State.AssignStat("wis")'>+</button>}</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-item">CON: @(State.SaveData?.Constitution ?? 10) @if(State.SaveData?.UnassignedStats > 0){<button class="btn-add-stat" @onclick='() => State.AssignStat("con")'>+</button>}</span>
+            <span class="stat-item">CHA: @(State.SaveData?.Charisma ?? 10) @if(State.SaveData?.UnassignedStats > 0){<button class="btn-add-stat" @onclick='() => State.AssignStat("cha")'>+</button>}</span>
+        </div>
+        <hr class="stat-divider" />
         <div>TOTAL ATK: ⚔️ @(15 + (State.SaveData?.Level ?? 1) * 2 + (State.SaveData?.BonusDmg ?? 0) + State.GetWeaponPower() * 5)</div>
         <div>DEFENSE: 🛡️ @State.GetTotalArmor()</div>
         <div>GOLD: 💰 @(State.SaveData?.Gold ?? 0)</div>

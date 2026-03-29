@@ -8,7 +8,13 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
     },
 
     handlePlayerAttack: function () {
-        if (this.player.isSwinging) return;
+        if (this.isDead || this.player.isSwinging) return;
+        const cost = 10;
+        if (this.stamina < cost) {
+            this.showDamageText("LOW STAMINA", this.player.position.clone(), "orange");
+            return;
+        }
+        this.stamina -= cost;
         this.performSwing(this.player);
         let weaponPower = 0; if (this.equipment.rightHand && this.equipment.rightHand.power) weaponPower = this.equipment.rightHand.power;
         const dmg = 15 + (this.level * 2) + this.bonusDmg + (weaponPower * 5);
@@ -29,9 +35,14 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
     },
 
     addXP: function (amount) {
-        this.xp += amount; this.showDamageText("+" + amount + " XP", this.player.position.clone(), "yellow");
-        if (this.xp >= this.xpToNext) { this.level++; this.xp -= this.xpToNext; this.xpToNext = this.level * 100; this.maxHealth += 10; this.player.health = this.maxHealth; this.showDamageText("LEVEL UP!", this.player.position.clone(), "gold"); }
-        this.saveGame();
+        if (this.dotnetRef) {
+            this.dotnetRef.invokeMethodAsync("AddXP", amount);
+        }
+    },
+
+    triggerLevelUpEffect: function () {
+        this.showDamageText("LEVEL UP!", this.player.position.clone(), "gold");
+        // We could add more particles or sound effects here later
     },
 
     handleNPCMovement: function () {
@@ -82,7 +93,11 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
             if (BABYLON.Vector3.Distance(this.player.position, c.position) < 2 && !c.isOpen) {
                 c.isOpen = true;
                 if (c.isBossChest && this.dotnetRef) this.dotnetRef.invokeMethodAsync("ClaimBossLoot", this.currentLevel);
-                else { const lootGold = Math.floor(Math.random() * 30) + 20 * this.currentLevel; this.gold += lootGold; this.saveGame(); this.showDamageText("+" + lootGold + " GOLD", c.position.clone(), "gold"); }
+                else { 
+                    const lootGold = Math.floor(Math.random() * 30) + 20 * this.currentLevel; 
+                    if (this.dotnetRef) this.dotnetRef.invokeMethodAsync("AddGold", lootGold);
+                    this.showDamageText("+" + lootGold + " GOLD", c.position.clone(), "gold"); 
+                }
                 const lid = c.getChildren().find(ch => ch.position.y > 0.5);
                 if (lid) { const a = new BABYLON.Animation("o", "rotation.x", 30, 0, 0); a.setKeys([{frame:0, value:0}, {frame:15, value:-1.5}]); lid.animations = [a]; this.scene.beginAnimation(lid, 0, 15, false); }
             }

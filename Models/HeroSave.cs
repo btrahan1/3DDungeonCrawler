@@ -14,6 +14,21 @@ namespace _3DDungeonCrawler.Models
         public int CurrentLevel { get; set; } = 1;
         public int MaxHealth { get; set; } = 100;
         public int BonusDmg { get; set; } = 0;
+
+        public int Stamina { get; set; } = 50;
+        public int MaxStamina { get; set; } = 50;
+        public int Mana { get; set; } = 50;
+        public int MaxMana { get; set; } = 50;
+
+        public int UnassignedStats { get; set; } = 0;
+
+        // Core Attributes (Base 10)
+        public int Strength { get; set; } = 10;
+        public int Dexterity { get; set; } = 10;
+        public int Constitution { get; set; } = 10;
+        public int Intelligence { get; set; } = 10;
+        public int Wisdom { get; set; } = 10;
+        public int Charisma { get; set; } = 10;
         public Equipment Equipment { get; set; } = new Equipment();
         public List<GameItem> Inventory { get; set; } = new List<GameItem>();
     }

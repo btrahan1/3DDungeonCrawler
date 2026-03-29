@@ -1,3 +1,4 @@
+@implements IDisposable
 @inject GameStateService State
 
 @if (!string.IsNullOrEmpty(State.LootMessage))
@@ -6,4 +7,16 @@
         <div class="loot-title">LOOT FOUND!</div>
         <div class="loot-item">@State.LootMessage</div>
     </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        State.OnStateChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        State.OnStateChanged -= StateHasChanged;
+    }
 }

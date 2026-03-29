@@ -3,12 +3,24 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
     initHUD: function () {
         const stack = new BABYLON.GUI.StackPanel(); stack.width = "250px"; stack.horizontalAlignment = 0; stack.verticalAlignment = 1; stack.left = "20px"; stack.top = "-20px";
         this.ui.addControl(stack);
-        this.nameText = new BABYLON.GUI.TextBlock(); this.nameText.text = "LVL " + this.level + " - WARRIOR"; this.nameText.color = "white"; this.nameText.height = "30px"; this.nameText.textHorizontalAlignment = 0; stack.addControl(this.nameText);
-        this.hBar = new BABYLON.GUI.Slider(); this.hBar.minimum = 0; this.hBar.maximum = this.maxHealth; this.hBar.value = this.maxHealth; this.hBar.height = "15px"; this.hBar.width = "200px"; this.hBar.color = "red"; this.hBar.background = "#333"; this.hBar.displayThumb = false; stack.addControl(this.hBar);
-        this.xBar = new BABYLON.GUI.Slider(); this.xBar.minimum = 0; this.xBar.maximum = this.xpToNext; this.xBar.value = 0; this.xBar.height = "8px"; this.xBar.width = "200px"; this.xBar.color = "yellow"; this.xBar.background = "#222"; this.xBar.displayThumb = false; stack.addControl(this.xBar);
-        this.goldText = new BABYLON.GUI.TextBlock(); this.goldText.text = "💰 " + this.gold; this.goldText.color = "#FFD700"; this.goldText.height = "40px"; this.goldText.textHorizontalAlignment = 0; stack.addControl(this.goldText);
-        this.promptText = new BABYLON.GUI.TextBlock(); this.promptText.text = ""; this.promptText.color = "yellow"; this.promptText.fontSize = 24; this.ui.addControl(this.promptText);
-        this.deathText = new BABYLON.GUI.TextBlock(); this.deathText.text = "YOU DIED"; this.deathText.color = "red"; this.deathText.fontSize = 80; this.deathText.isVisible = false; this.ui.addControl(this.deathText);
+        this.nameText = new BABYLON.GUI.TextBlock(); this.nameText.text = "LVL " + this.level + " - WARRIOR"; this.nameText.color = "white"; this.nameText.height = "35px"; this.nameText.fontSize = 18; this.nameText.textHorizontalAlignment = 0; this.nameText.fontFamily = "MedievalSharp"; stack.addControl(this.nameText);
+        
+        const createBar = (name, color, h, max) => {
+            const container = new BABYLON.GUI.StackPanel(); container.isVertical = false; container.height = h + "px"; container.width = "200px"; container.horizontalAlignment = 0;
+            const label = new BABYLON.GUI.TextBlock(); label.text = name; label.color = "white"; label.width = "40px"; label.fontSize = 12; label.fontFamily = "MedievalSharp"; container.addControl(label);
+            const slider = new BABYLON.GUI.Slider(); slider.minimum = 0; slider.maximum = max; slider.value = max; slider.height = (h-4) + "px"; slider.width = "160px"; slider.color = color; slider.background = "#222"; slider.displayThumb = false; slider.borderColor = "#444"; slider.isReadOnly = true; container.addControl(slider);
+            stack.addControl(container); return slider;
+        };
+
+        this.hBar = createBar("HP", "#cd1d1d", 22, this.maxHealth);
+        this.sBar = createBar("STA", "#d4af37", 18, 100);
+        this.mBar = createBar("MP", "#1e90ff", 18, 100);
+        this.xBar = createBar("XP", "#32cd32", 12, this.xpToNext);
+        this.xBar.value = 0;
+
+        this.goldText = new BABYLON.GUI.TextBlock(); this.goldText.text = "💰 " + this.gold; this.goldText.color = "#FFD700"; this.goldText.height = "40px"; this.goldText.fontSize = 20; this.goldText.textHorizontalAlignment = 0; this.goldText.fontFamily = "MedievalSharp"; stack.addControl(this.goldText);
+        this.promptText = new BABYLON.GUI.TextBlock(); this.promptText.text = ""; this.promptText.color = "yellow"; this.promptText.fontSize = 24; this.promptText.fontFamily = "MedievalSharp"; this.ui.addControl(this.promptText);
+        this.deathText = new BABYLON.GUI.TextBlock(); this.deathText.text = "YOU DIED"; this.deathText.color = "red"; this.deathText.fontSize = 80; this.deathText.fontFamily = "Almendra SC"; this.deathText.isVisible = false; this.ui.addControl(this.deathText);
     },
 
     createHealthBar: function(m, offset = -100) {
@@ -18,6 +30,8 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
 
     updateHUD: function () {
         this.hBar.maximum = this.maxHealth; this.hBar.value = this.player.health;
+        this.sBar.maximum = this.maxStamina || 100; this.sBar.value = this.stamina;
+        this.mBar.maximum = this.maxMana || 100; this.mBar.value = this.mana;
         this.xBar.maximum = this.xpToNext; this.xBar.value = this.xp;
         this.goldText.text = "💰 " + this.gold; this.nameText.text = "LVL " + this.level + " - WARRIOR (Floor " + this.currentLevel + ")";
         let p = "";

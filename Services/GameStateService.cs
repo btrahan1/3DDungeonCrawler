@@ -113,16 +113,45 @@ namespace _3DDungeonCrawler.Services
 
         public async Task CreateCharacter(int slot, string name, string race, string cls)
         {
-            int startHP = race == "DWARF" ? 120 : 100;
-            int startDmg = race == "ELF" ? 2 : 0;
-
             var save = new HeroSave {
                 Name = name,
                 Race = race,
                 Class = cls,
-                MaxHealth = startHP,
-                BonusDmg = startDmg
+                Strength = 10,
+                Dexterity = 10,
+                Constitution = 10,
+                Intelligence = 10,
+                Wisdom = 10,
+                Charisma = 10
             };
+
+            // Apply Race Bonuses
+            switch (race.ToUpper())
+            {
+                case "ELF":
+                    save.Dexterity += 1;
+                    save.Intelligence += 1;
+                    save.Strength -= 1;
+                    break;
+                case "DWARF":
+                    save.Strength += 1;
+                    save.Constitution += 1;
+                    save.Dexterity -= 1;
+                    break;
+                case "GNOME":
+                    save.Intelligence += 1;
+                    save.Wisdom += 1;
+                    save.Strength -= 1;
+                    save.Constitution -= 1;
+                    break;
+            }
+
+            // Derive all pools from attributes
+            RefreshDerivedStats(save);
+            
+            // Initial fill
+            save.Stamina = save.MaxStamina;
+            save.Mana = save.MaxMana;
 
             ActiveSlot = slot;
             await SaveHero(save);
@@ -195,7 +224,7 @@ namespace _3DDungeonCrawler.Services
             if (SaveData != null) await SaveHero(SaveData);
             // Sync with JS engine if playing
             if (CurrentState == GameState.Playing || CurrentState == GameState.ESCMenu) {
-                await _js.InvokeVoidAsync("window.DungeonCrawler.updateEquipment", SaveData?.Equipment);
+                await _js.InvokeVoidAsync("window.DungeonCrawler.updateGameState", SaveData);
             }
             NotifyChange();
         }
@@ -270,6 +299,80 @@ namespace _3DDungeonCrawler.Services
             SaveData.Inventory.Add(item);
             await UpdateAndSave();
             await SaveBank();
+        }
+        [Microsoft.JSInterop.JSInvokable]
+        public async Task AddGold(int amount)
+        {
+            if (SaveData == null) return;
+            SaveData.Gold += amount;
+            await UpdateAndSave();
+        }
+
+        [Microsoft.JSInterop.JSInvokable]
+        public async Task AddXP(int amount)
+        {
+            if (SaveData == null) return;
+            SaveData.XP += amount;
+            if (SaveData.XP >= SaveData.XPToNext) {
+                await LevelUp();
+            } else {
+                await UpdateSave();
+            }
+        }
+
+        private async Task LevelUp()
+        {
+            if (SaveData == null) return;
+            SaveData.Level++;
+            SaveData.XP -= SaveData.XPToNext;
+            SaveData.XPToNext = SaveData.Level * 100;
+            SaveData.UnassignedStats++;
+
+            // Class Bonuses
+            switch (SaveData.Class?.ToUpper()) {
+                case "WARRIOR": SaveData.Strength++; break;
+                case "SCOUT": SaveData.Dexterity++; break;
+                case "MAGE": SaveData.Intelligence++; break;
+            }
+
+            // Race Bonus (Gnome)
+            if (SaveData.Race?.ToUpper() == "GNOME") SaveData.Wisdom++;
+
+            RefreshDerivedStats(SaveData);
+            
+            // Full heal on Level Up
+            SaveData.MaxHealth = 100 + (SaveData.Constitution - 10) * 10; // Already in Refresh, but ensuring full HP.
+            SaveData.Stamina = SaveData.MaxStamina;
+            SaveData.Mana = SaveData.MaxMana;
+
+            await UpdateAndSave();
+            // Trigger JS level up effect
+            await _js.InvokeVoidAsync("window.DungeonCrawler.triggerLevelUpEffect");
+        }
+
+        public void RefreshDerivedStats(HeroSave s)
+        {
+            if (s == null) return;
+            s.MaxHealth = 100 + (s.Constitution - 10) * 10;
+            s.MaxStamina = 50 + (s.Constitution - 10) * 5 + (s.Dexterity - 10) * 5;
+            s.MaxMana = 50 + (s.Wisdom - 10) * 5 + (s.Intelligence - 10) * 5;
+            s.BonusDmg = (s.Strength - 10) * 2;
+        }
+
+        public async Task AssignStat(string stat)
+        {
+            if (SaveData == null || SaveData.UnassignedStats <= 0) return;
+            switch(stat.ToLower()) {
+                case "str": SaveData.Strength++; break;
+                case "dex": SaveData.Dexterity++; break;
+                case "con": SaveData.Constitution++; break;
+                case "int": SaveData.Intelligence++; break;
+                case "wis": SaveData.Wisdom++; break;
+                case "cha": SaveData.Charisma++; break;
+            }
+            SaveData.UnassignedStats--;
+            RefreshDerivedStats(SaveData);
+            await UpdateAndSave();
         }
 
         public async Task DepositAllGold()

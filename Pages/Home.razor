@@ -82,6 +82,18 @@
     }
 
     [JSInvokable]
+    public async Task AddGold(int amount)
+    {
+        await State.AddGold(amount);
+    }
+
+    [JSInvokable]
+    public async Task AddXP(int amount)
+    {
+        await State.AddXP(amount);
+    }
+
+    [JSInvokable]
     public async Task ClaimBossLoot(int dungeonLevel)
     {
         await State.ClaimBossLoot(dungeonLevel);

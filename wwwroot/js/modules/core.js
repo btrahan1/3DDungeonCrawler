@@ -20,6 +20,18 @@ window.DungeonCrawler = {
             this.currentLevel = savedData.currentLevel || 1;
             this.maxHealth = savedData.maxHealth || 100;
             this.bonusDmg = savedData.bonusDmg || 0;
+            this.stamina = savedData.stamina || 50;
+            this.maxStamina = savedData.maxStamina || 50;
+            this.mana = savedData.mana || 50;
+            this.maxMana = savedData.maxMana || 50;
+            this.attributes = {
+                strength: savedData.strength || 10,
+                dexterity: savedData.dexterity || 10,
+                constitution: savedData.constitution || 10,
+                intelligence: savedData.intelligence || 10,
+                wisdom: savedData.wisdom || 10,
+                charisma: savedData.charisma || 10
+            };
             this.equipment = savedData.equipment || {};
             this.inventory = savedData.inventory || [];
             this.xpToNext = this.level * 100;
@@ -131,13 +143,26 @@ window.DungeonCrawler = {
         });
     },
 
-    updateEquipment: function(equipData) {
-        if (equipData) {
-            this.equipment = equipData;
-            console.log("Equipment updated in engine:", this.equipment);
+    updateGameState: function(savedData) {
+        if (savedData) {
+            this.xp = savedData.xp || 0;
+            this.level = savedData.level || 1;
+            this.gold = savedData.gold || 0;
+            this.maxHealth = savedData.maxHealth || 100;
+            this.bonusDmg = savedData.bonusDmg || 0;
+            this.stamina = savedData.stamina || 50;
+            this.maxStamina = savedData.maxStamina || 50;
+            this.mana = savedData.mana || 50;
+            this.maxMana = savedData.maxMana || 50;
+            this.xpToNext = this.level * 100;
+            this.equipment = savedData.equipment || {};
+            if (this.player && this.player.health > this.maxHealth) this.player.health = this.maxHealth;
+            console.log("Game state synced from .NET:", savedData);
         }
     },
 
+    // saveGame is now handled by GameStateService in .NET
+    /*
     saveGame: function() {
         const data = { 
             level: this.level, xp: this.xp, gold: this.gold, 
@@ -146,6 +171,7 @@ window.DungeonCrawler = {
         };
         localStorage.setItem("dungeonSave", JSON.stringify(data));
     },
+    */
 
     initPortrait: async function (canvasId, savedData) {
         const canvas = document.getElementById(canvasId);
@@ -153,8 +179,8 @@ window.DungeonCrawler = {
         const engine = new BABYLON.Engine(canvas, true);
         const scene = new BABYLON.Scene(engine);
         scene.clearColor = new BABYLON.Color4(0.05, 0.05, 0.08, 1);
-        const camera = new BABYLON.ArcRotateCamera("pCam", -Math.PI / 2, Math.PI / 2.5, 4, new BABYLON.Vector3(0, 1.2, 0), scene);
-        camera.lowerRadiusLimit = camera.upperRadiusLimit = 4;
+        const camera = new BABYLON.ArcRotateCamera("pCam", -Math.PI / 2, Math.PI / 2.5, 3.2, new BABYLON.Vector3(0, 1.1, 0), scene);
+        camera.lowerRadiusLimit = camera.upperRadiusLimit = 3.2;
         new BABYLON.HemisphericLight("pLight", new BABYLON.Vector3(0, 1, 0), scene);
         const pLight = new BABYLON.PointLight("pLight2", new BABYLON.Vector3(2, 2, 2), scene); pLight.intensity = 0.8;
         try {
@@ -175,6 +201,10 @@ window.DungeonCrawler = {
         if (this.inputMap["s"]) { this.player.moveWithCollisions(this.player.forward.scale(-0.06)); mov = true; }
         if (this.inputMap["a"]) this.player.rotation.y -= 0.05; if (this.inputMap["d"]) this.player.rotation.y += 0.05;
         this.player.isMoving = mov;
+
+        // Passive Regeneration (per frame @ 60fps)
+        if (this.stamina < this.maxStamina) this.stamina = Math.min(this.maxStamina, this.stamina + 0.15);
+        if (this.mana < this.maxMana) this.mana = Math.min(this.maxMana, this.mana + 0.05);
     },
 
     updateAnimations: function () {

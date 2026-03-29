@@ -34,7 +34,7 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         const fM = new BABYLON.MultiMaterial("fm", currentScene); fM.subMaterials = [new BABYLON.StandardMaterial("f", currentScene), mS, mS, mS, mS, mS]; fM.subMaterials[0].diffuseTexture = tF;
         const torso = BABYLON.MeshBuilder.CreateBox("t", { width: 0.6, height: 0.8, depth: 0.3 }, currentScene); torso.parent = root; torso.position.y = 1.1; torso.material = mC; if(s) s.addShadowCaster(torso);
         const head = BABYLON.MeshBuilder.CreateBox("h", { size: 0.45 }, currentScene); head.parent = root; head.position.y = 1.75; head.material = fM; head.subMeshes = []; for(let i=0; i<6; i++) new BABYLON.SubMesh(i, 0, head.getTotalVertices(), i*6, 6, head);
-        const cA = (isL) => { const p = new BABYLON.TransformNode("p", currentScene); p.parent = torso; p.position.set(isL ? 0.4 : -0.4, 0.3, 0); const a = BABYLON.MeshBuilder.CreateBox("a", { width: 0.2, height: 0.7, depth: 0.2 }, currentScene); a.parent = p; a.position.y = -0.3; a.material = mA; if(s) s.addShadowCaster(a); return p; };
+        const cA = (isL) => { const p = new BABYLON.TransformNode("p", currentScene); p.parent = torso; p.position.set(isL ? -0.4 : 0.4, 0.3, 0); const a = BABYLON.MeshBuilder.CreateBox("a", { width: 0.2, height: 0.7, depth: 0.2 }, currentScene); a.parent = p; a.position.y = -0.3; a.material = mA; if(s) s.addShadowCaster(a); return p; };
         const aL = cA(true), aR = cA(false);
         const cL = (isL) => { const p = new BABYLON.TransformNode("p", currentScene); p.parent = root; p.position.set(isL ? 0.18 : -0.18, 0.7, 0); const l = BABYLON.MeshBuilder.CreateBox("l", { width: 0.25, height: 0.7, depth: 0.25 }, currentScene); l.parent = p; l.position.y = -0.3; l.material = mL; if(s) s.addShadowCaster(l); return p; };
         const lL = cL(true), lR = cL(false);
@@ -43,7 +43,7 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         if (e.head) await addPart(e.head, head, [0, 0.1, 0], [0, 0, 0], [1, 1, 1]);
         if (e.chest) await addPart(e.chest, torso, [0, 0, 0], [0, 0, 0], [1, 1, 1]);
         if (e.right) await addPart(e.right, aR, [0, -0.6, 0], [Math.PI/2, 0, 0], [1, 1, 1]);
-        if (e.left) await addPart(e.left, aL, [0.2, -0.4, 0], [0, -Math.PI/2, 0], [1, 1, 1]);
+        if (e.left) await addPart(e.left, aL, [-0.1, -0.4, 0], [0, -Math.PI/2, 0], [1, 1, 1]);
         if (e.legs) { await addPart(e.legs, lL, [0, -0.3, 0], [0,0,0], [1,1,1]); await addPart(e.legs, lR, [0, -0.3, 0], [0,0,0], [1,1,1]); }
         root.userData = { armL: aL, armR: aR, legL: lL, legR: lR, ai: { target: null, idle: 0, lastPos: null, stuckCount: 0 } }; return root;
     }
