@@ -1,0 +1,20 @@
+@inject GameStateService State
+
+<div class="overlay selection-menu">
+    <h2>@(State.SaveData?.Name ?? "HERO") CONTINUED</h2>
+    <div class="status-summary">LVL @(State.SaveData?.Level ?? 1) @(State.SaveData?.Class ?? "WARRIOR") (Floor @(State.SaveData?.CurrentLevel ?? 1))</div>
+    
+    <button class="btn-start" @onclick="OnStartDungeon">ENTER DUNGEON</button>
+    
+    <div class="menu-row">
+        <button class="btn-menu" @onclick="State.OpenShop">ENTER SHOP</button>
+        <button class="btn-menu" @onclick="State.OpenCharacterSheet">MANAGE CHARACTER</button>
+        <button class="btn-menu btn-bank" @onclick='() => State.CurrentState = GameState.Bank'>ENTER BANK</button>
+    </div>
+    
+    <button class="btn-menu btn-back" @onclick='() => State.CurrentState = GameState.CharacterSelect'>BACK</button>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnStartDungeon { get; set; }
+}

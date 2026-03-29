@@ -1,0 +1,62 @@
+@inject GameStateService State
+@implements IDisposable
+
+<div class="overlay shop-menu esc-inventory">
+    <h2>CHARACTER SHEET</h2>
+    
+    <div class="shop-container">
+        <!-- Left: Paper Doll -->
+        <PaperDoll />
+
+        <!-- Right: Inventory -->
+        <div class="tabs-section">
+            <div class="tabs">
+                <button class="tab-btn active">INVENTORY</button>
+            </div>
+
+            <div class="tab-content inventory-grid">
+                @for (int i = 0; i < 16; i++)
+                {
+                    var index = i;
+                    var invItem = (State.SaveData?.Inventory.Count > i) ? State.SaveData.Inventory[i] : null;
+                    <div class="grid-slot">
+                        @if (invItem != null)
+                        {
+                            <div class='item-icon tier-@invItem.Tier.ToLower()' 
+                                 title='@invItem.Name (Power: @invItem.Power)'
+                                 @onclick="() => State.EquipItem(index)">
+                                @((MarkupString)IconHelper.GetSvgIcon(invItem.Slot))
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (State.CurrentState == GameState.CharacterSheet)
+    {
+        <button class="btn-menu btn-back" @onclick="() => State.CurrentState = GameState.ContinueMenu">BACK</button>
+    }
+    else
+    {
+        <div class="esc-buttons">
+            <button class="btn-menu" @onclick='() => State.CurrentState = GameState.Playing'>RESUME</button>
+            <button class="btn-menu" @onclick="() => State.CurrentState = GameState.MainMenu">EXIT DUNGEON</button>
+        </div>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        State.OnStateChanged += HandleStateChanged;
+    }
+
+    private void HandleStateChanged() => StateHasChanged();
+
+    public void Dispose()
+    {
+        State.OnStateChanged -= HandleStateChanged;
+    }
+}

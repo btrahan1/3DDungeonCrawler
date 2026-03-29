@@ -1,0 +1,74 @@
+@inject GameStateService State
+@implements IDisposable
+
+<div class="overlay bank-menu">
+    <h2 class="title-small">THE SHARED VAULT</h2>
+    <div class="bank-container">
+        <!-- Left: Vault Storage -->
+        <div class="bank-section vault">
+            <h3>🏛️ THE VAULT (@State.Bank.Items.Count / 24)</h3>
+            <div class="inventory-grid bank-grid">
+                @for (int i = 0; i < 24; i++)
+                {
+                    var index = i;
+                    var item = i < State.Bank.Items.Count ? State.Bank.Items[i] : null;
+                    <div class="grid-slot">
+                        @if (item != null)
+                        {
+                            <div class='item-icon tier-@item.Tier.ToLower()' 
+                                 title='@item.Name (Power: @item.Power)'
+                                 @onclick="() => State.WithdrawFromBank(index)">
+                                @((MarkupString)IconHelper.GetSvgIcon(item.Slot))
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="gold-controls">
+                <div class="gold-amount">VAULT GOLD: 💰 @State.Bank.Gold</div>
+                <button class="btn-gold" @onclick="State.WithdrawAllGold">WITHDRAW ALL</button>
+            </div>
+        </div>
+
+        <!-- Right: Player Bag -->
+        <div class="bank-section bag">
+            <h3>🎒 YOUR BAG (@(State.SaveData?.Inventory.Count ?? 0) / 16)</h3>
+            <div class="inventory-grid player-grid">
+                @for (int i = 0; i < 16; i++)
+                {
+                    var index = i;
+                    var invItem = (State.SaveData?.Inventory.Count > i) ? State.SaveData.Inventory[i] : null;
+                    <div class="grid-slot">
+                        @if (invItem != null)
+                        {
+                            <div class='item-icon tier-@invItem.Tier.ToLower()' 
+                                 title='@invItem.Name (Power: @invItem.Power)'
+                                 @onclick="() => State.DepositToBank(index)">
+                                @((MarkupString)IconHelper.GetSvgIcon(invItem.Slot))
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="gold-controls">
+                <div class="gold-amount">BAG GOLD: 💰 @(State.SaveData?.Gold ?? 0)</div>
+                <button class="btn-gold" @onclick="State.DepositAllGold">DEPOSIT ALL</button>
+            </div>
+        </div>
+    </div>
+    <button class="btn-menu btn-back" @onclick="() => State.CurrentState = GameState.ContinueMenu">BACK</button>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        State.OnStateChanged += HandleStateChanged;
+    }
+
+    private void HandleStateChanged() => StateHasChanged();
+
+    public void Dispose()
+    {
+        State.OnStateChanged -= HandleStateChanged;
+    }
+}

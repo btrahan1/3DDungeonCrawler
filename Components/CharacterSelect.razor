@@ -1,0 +1,66 @@
+@inject GameStateService State
+
+<div class="overlay char-select-menu">
+    <h2 class="title-small">SELECT CHARACTER</h2>
+    <div class="slots-container">
+        @for (int i = 0; i < 3; i++)
+        {
+            var slotIndex = i;
+            var meta = State.SlotMeta.ContainsKey(slotIndex) ? State.SlotMeta[slotIndex] : null;
+            <div class="char-slot @(meta == null ? "empty" : "active")">
+                @if (meta != null)
+                {
+                    <div class="slot-info">
+                        <div class="slot-name">@meta.Name</div>
+                        <div class="slot-stats">LVL @meta.Level @meta.Race @meta.Class</div>
+                        <div class="slot-floor">FLOOR @meta.Floor</div>
+                    </div>
+                    <div class="slot-actions">
+                        <button class="btn-slot btn-resume" @onclick="() => State.LoadCharacter(slotIndex)">RESUME</button>
+                        <button class="btn-slot btn-delete" @onclick="() => State.DeleteCharacter(slotIndex)">DELETE</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="slot-empty-text">EMPTY SLOT</div>
+                    @if (creatingSlot == slotIndex)
+                    {
+                        <div class="name-entry">
+                            <input @bind="newName" placeholder="NAME..." maxlength="12" />
+                            <select @bind="selectedClass" class="char-select-dropdown">
+                                <option value="WARRIOR">WARRIOR</option>
+                                <option value="MAGE">MAGE (SOON)</option>
+                                <option value="ROGUE">ROGUE (SOON)</option>
+                            </select>
+                            <select @bind="selectedRace" class="char-select-dropdown">
+                                <option value="HUMAN">HUMAN</option>
+                                <option value="ELF">ELF (+DMG)</option>
+                                <option value="DWARF">DWARF (+HP)</option>
+                            </select>
+                            <button class="btn-slot btn-create" @onclick="() => CreateHero(slotIndex)">CREATE</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <button class="btn-slot btn-new" @onclick="() => creatingSlot = slotIndex">NEW HERO</button>
+                    }
+                }
+            </div>
+        }
+    </div>
+    <button class="btn-menu btn-back" @onclick="() => State.CurrentState = GameState.MainMenu">BACK</button>
+</div>
+
+@code {
+    private int? creatingSlot = null;
+    private string newName = "";
+    private string selectedClass = "WARRIOR";
+    private string selectedRace = "HUMAN";
+
+    private async Task CreateHero(int slot)
+    {
+        await State.CreateCharacter(slot, newName.ToUpper(), selectedRace, selectedClass);
+        creatingSlot = null;
+        newName = "";
+    }
+}

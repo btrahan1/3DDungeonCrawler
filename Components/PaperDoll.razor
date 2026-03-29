@@ -1,0 +1,47 @@
+@inject GameStateService State
+@implements IDisposable
+
+<div class="paper-doll-section">
+    <div class="portrait-wrapper">
+        <canvas id="portraitCanvas"></canvas>
+    </div>
+    <div class="stats-panel">
+        <div>TOTAL ATK: ⚔️ @(15 + (State.SaveData?.Level ?? 1) * 2 + (State.SaveData?.BonusDmg ?? 0) + State.GetWeaponPower() * 5)</div>
+        <div>DEFENSE: 🛡️ @State.GetTotalArmor()</div>
+        <div>GOLD: 💰 @(State.SaveData?.Gold ?? 0)</div>
+    </div>
+    <div class="equipment-slots">
+        @foreach(var slot in new[] { "head", "chest", "hands", "legs", "feet", "rightHand", "leftHand" })
+        {
+            var s = slot;
+            var item = State.SaveData?.Equipment?.GetSlot(s);
+            bool hasItem = item != null;
+            <div class="eq-slot @s" title="@(hasItem ? $"{item.Name} (Power: {item.Power})" : s)">
+                @if (hasItem)
+                {
+                    <div class='item-icon equipped tier-@item.Tier.ToLower()' @onclick="() => State.UnequipItem(s)">
+                        @((MarkupString)IconHelper.GetSvgIcon(s))
+                    </div>
+                }
+                else
+                {
+                    <div class="slot-placeholder">@((MarkupString)IconHelper.GetSvgIcon(s))</div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        State.OnStateChanged += HandleStateChanged;
+    }
+
+    private void HandleStateChanged() => StateHasChanged();
+
+    public void Dispose()
+    {
+        State.OnStateChanged -= HandleStateChanged;
+    }
+}

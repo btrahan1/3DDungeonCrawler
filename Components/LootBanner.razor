@@ -1,0 +1,9 @@
+@inject GameStateService State
+
+@if (!string.IsNullOrEmpty(State.LootMessage))
+{
+    <div class="loot-notification">
+        <div class="loot-title">LOOT FOUND!</div>
+        <div class="loot-item">@State.LootMessage</div>
+    </div>
+}

@@ -1,0 +1,80 @@
+@inject GameStateService State
+@implements IDisposable
+
+<div class="overlay shop-menu">
+    <h2>CHARACTER & TREASURE</h2>
+    
+    <div class="shop-container">
+        <!-- Left: Paper Doll -->
+        <PaperDoll />
+
+        <!-- Right: Shop & Inventory Tabs -->
+        <div class="tabs-section">
+            <div class="tabs">
+                <button class="tab-btn @(activeTab == "shop" ? "active" : "")" @onclick='() => activeTab = "shop"'>SHOP</button>
+                <button class="tab-btn @(activeTab == "inv" ? "active" : "")" @onclick='() => activeTab = "inv"'>INVENTORY</button>
+            </div>
+
+            @if (activeTab == "shop")
+            {
+                <div class="tab-content">
+                    <div class="shop-item">
+                        <div class="item-info">HEALING POTION</div>
+                        <button class="btn-buy" @onclick="State.BuyHeal" disabled="@(State.SaveData?.Gold < 25)">25G</button>
+                    </div>
+                    <div class="shop-item">
+                        <div class="item-info">IRON HELMET (+2 DEF)</div>
+                        <button class="btn-buy" @onclick='() => State.BuyItem("Iron Helmet", "head", "data/shield.json", 100)' disabled="@(State.SaveData?.Gold < 100)">100G</button>
+                    </div>
+                    <div class="shop-item">
+                        <div class="item-info">STEEL SHIELD</div>
+                        <button class="btn-buy" @onclick='() => State.BuyItem("Steel Shield", "leftHand", "data/shield.json", 200)' disabled="@(State.SaveData?.Gold < 200)">200G</button>
+                    </div>
+                    <div class="shop-item">
+                        <div class="item-info">SHARPEN BLADE (+5 DMG)</div>
+                        <button class="btn-buy" @onclick="State.BuyStrength" disabled="@(State.SaveData?.Gold < 150)">150G</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="tab-content inventory-grid">
+                    @for (int i = 0; i < 16; i++)
+                    {
+                        var index = i;
+                        var invItem = (State.SaveData?.Inventory.Count > i) ? State.SaveData.Inventory[i] : null;
+                        <div class="grid-slot">
+                            @if (invItem != null)
+                            {
+                                int sellPrice = State.GetSellPrice(invItem);
+                                <div class='item-icon tier-@invItem.Tier.ToLower()' 
+                                     title='@invItem.Name (Power: @invItem.Power)'
+                                     @onclick="() => State.SellItem(index)">
+                                    @((MarkupString)IconHelper.GetSvgIcon(invItem.Slot))
+                                    <div class="sell-badge">💰@sellPrice</div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    <button class="btn-menu btn-back" @onclick="() => State.CurrentState = GameState.ContinueMenu">BACK</button>
+</div>
+
+@code {
+    private string activeTab = "shop";
+
+    protected override void OnInitialized()
+    {
+        State.OnStateChanged += HandleStateChanged;
+    }
+
+    private void HandleStateChanged() => StateHasChanged();
+
+    public void Dispose()
+    {
+        State.OnStateChanged -= HandleStateChanged;
+    }
+}
