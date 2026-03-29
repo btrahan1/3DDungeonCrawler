@@ -3,7 +3,15 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
     initHUD: function () {
         const stack = new BABYLON.GUI.StackPanel(); stack.width = "250px"; stack.horizontalAlignment = 0; stack.verticalAlignment = 1; stack.left = "20px"; stack.top = "-20px";
         this.ui.addControl(stack);
-        this.nameText = new BABYLON.GUI.TextBlock(); this.nameText.text = "LVL " + this.level + " - WARRIOR"; this.nameText.color = "white"; this.nameText.height = "35px"; this.nameText.fontSize = 18; this.nameText.textHorizontalAlignment = 0; this.nameText.fontFamily = "MedievalSharp"; stack.addControl(this.nameText);
+        this.nameText = new BABYLON.GUI.TextBlock(); this.nameText.text = "LVL " + this.level + " - " + this.playerClass; this.nameText.color = "white"; this.nameText.height = "35px"; this.nameText.fontSize = 18; this.nameText.textHorizontalAlignment = 0; this.nameText.fontFamily = "MedievalSharp"; stack.addControl(this.nameText);
+        
+        if (this.playerClass === "HEALER") {
+            const healBtn = BABYLON.GUI.Button.CreateSimpleButton("healBtn", "HEAL (Q)");
+            healBtn.width = "120px"; healBtn.height = "35px"; healBtn.color = "white"; healBtn.background = "#2e7d32";
+            healBtn.fontFamily = "MedievalSharp"; healBtn.cornerRadius = 5; healBtn.thickness = 2;
+            healBtn.onPointerUpObservable.add(() => this.handleHealSpell());
+            stack.addControl(healBtn);
+        }
         
         const createBar = (name, color, h, max) => {
             const container = new BABYLON.GUI.StackPanel(); container.isVertical = false; container.height = h + "px"; container.width = "200px"; container.horizontalAlignment = 0;
@@ -33,7 +41,7 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         this.sBar.maximum = this.maxStamina || 100; this.sBar.value = this.stamina;
         this.mBar.maximum = this.maxMana || 100; this.mBar.value = this.mana;
         this.xBar.maximum = this.xpToNext; this.xBar.value = this.xp;
-        this.goldText.text = "💰 " + this.gold; this.nameText.text = "LVL " + this.level + " - WARRIOR (Floor " + this.currentLevel + ")";
+        this.goldText.text = "💰 " + this.gold; this.nameText.text = "LVL " + this.level + " - " + this.playerClass + " (Floor " + this.currentLevel + ")";
         let p = "";
         this.chests.forEach(c => { if (BABYLON.Vector3.Distance(this.player.position, c.position) < 2 && !c.isOpen) p = "PRESS [E] TO OPEN CHEST"; });
         if (this.stairs && BABYLON.Vector3.Distance(this.player.position, this.stairs.position) < 3) p = "CLICK STAIRS TO DESCEND";

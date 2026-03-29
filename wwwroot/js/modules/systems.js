@@ -196,5 +196,36 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         c.position = p; c.isChest = true; c.isBossChest = true; this.chests.push(c);
         c.getChildMeshes().forEach(m => { if (m.material) { const mat = m.material.clone("gc"); mat.diffuseColor = new BABYLON.Color3(1, 0.84, 0); mat.emissiveColor = new BABYLON.Color3(0.2, 0.1, 0); m.material = mat; } });
         this.showDamageText("BOSS DEFEATED! LOOT SPAWNED!", p, "gold");
+    },
+    
+    handleHealSpell: function () {
+        if (this.isDead) return;
+        const manaCost = 10;
+        if (this.mana < manaCost) {
+            this.showDamageText("LOW MANA", this.player.position.clone(), "cyan");
+            return;
+        }
+        if (this.player.health >= this.maxHealth) {
+            this.showDamageText("FULL HEALTH", this.player.position.clone(), "white");
+            return;
+        }
+
+        this.mana -= manaCost;
+        const healAmt = this.attributes.wisdom || 10;
+        this.player.health = Math.min(this.maxHealth, this.player.health + healAmt);
+        this.showDamageText("+" + healAmt + " HP", this.player.position.clone(), "#32cd32");
+        
+        // Optional: Small visual effect (flash)
+        if (this.player.getChildMeshes) {
+            this.player.getChildMeshes().forEach(m => {
+                if (m.material) {
+                    const oldEmissive = m.material.emissiveColor?.clone() || new BABYLON.Color3(0,0,0);
+                    m.material.emissiveColor = new BABYLON.Color3(0, 0.5, 0);
+                    setTimeout(() => m.material.emissiveColor = oldEmissive, 200);
+                }
+            });
+        }
+        
+        this.updateHUD();
     }
 });

@@ -4,6 +4,7 @@ window.DungeonCrawler = {
     dungeonSize: 60, gridSize: 2.5, currentLevel: 1, dotnetRef: null,
     isTransitioning: false, isDead: false,
     xp: 0, level: 1, xpToNext: 100, gold: 0, maxHealth: 100, bonusDmg: 0,
+    playerClass: "WARRIOR", attributes: { wisdom: 10 },
     equipment: {}, inventory: [],
 
     init: async function (canvasId, dotnetRef, savedData) {
@@ -24,7 +25,7 @@ window.DungeonCrawler = {
             this.maxStamina = savedData.maxStamina || 50;
             this.mana = savedData.mana || 50;
             this.maxMana = savedData.maxMana || 50;
-            this.attributes = {
+            this.attributes = savedData.attributes || {
                 strength: savedData.strength || 10,
                 dexterity: savedData.dexterity || 10,
                 constitution: savedData.constitution || 10,
@@ -32,11 +33,12 @@ window.DungeonCrawler = {
                 wisdom: savedData.wisdom || 10,
                 charisma: savedData.charisma || 10
             };
+            this.playerClass = savedData.class || "WARRIOR";
             this.equipment = savedData.equipment || {};
             this.inventory = savedData.inventory || [];
             this.xpToNext = this.level * 100;
         } else if (!this.engine) {
-            this.xp = 0; this.level = 1; this.gold = 0; this.currentLevel = 1; this.maxHealth = 100; this.bonusDmg = 0; this.xpToNext = 100; this.equipment = {}; this.inventory = [];
+            this.xp = 0; this.level = 1; this.gold = 0; this.currentLevel = 1; this.maxHealth = 100; this.bonusDmg = 0; this.xpToNext = 100; this.playerClass = "WARRIOR"; this.attributes = { wisdom: 10 }; this.equipment = {}; this.inventory = [];
         }
 
         this.isTransitioning = false; this.isDead = false;
@@ -66,6 +68,7 @@ window.DungeonCrawler = {
             if (kbInfo.type === BABYLON.KeyboardEventTypes.KEYDOWN) {
                 this.inputMap[key] = true;
                 if (key === " " && !this.isDead) this.handlePlayerAttack();
+                if (key === "q" && !this.isDead && this.playerClass === "HEALER") this.handleHealSpell();
                 if (key === "e" && !this.isDead) this.handleInteractions();
                 if (key === "escape") {
                     if (this.dotnetRef) this.dotnetRef.invokeMethodAsync("OnPause");
@@ -200,7 +203,7 @@ window.DungeonCrawler = {
         if (!this.player) return; let mov = false;
         if (this.inputMap["w"]) { this.player.moveWithCollisions(this.player.forward.scale(0.12)); mov = true; }
         if (this.inputMap["s"]) { this.player.moveWithCollisions(this.player.forward.scale(-0.06)); mov = true; }
-        if (this.inputMap["a"]) this.player.rotation.y -= 0.05; if (this.inputMap["d"]) this.player.rotation.y += 0.05;
+        if (this.inputMap["a"]) this.player.rotation.y -= 0.025; if (this.inputMap["d"]) this.player.rotation.y += 0.025;
         this.player.isMoving = mov;
 
         // Passive Regeneration (per frame @ 60fps)
