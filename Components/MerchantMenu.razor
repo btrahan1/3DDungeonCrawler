@@ -31,6 +31,18 @@
                         <button class="btn-buy" @onclick='() => State.BuyItem("Steel Shield", "leftHand", "data/shield.json", 200)' disabled="@(State.SaveData?.Gold < 200)">200G</button>
                     </div>
                     <div class="shop-item">
+                        <div class="item-info">IRON MACE</div>
+                        <button class="btn-buy" @onclick='() => State.BuyItem("Iron Mace", "rightHand", "data/mace.json", 150, "Melee")' disabled="@(State.SaveData?.Gold < 150)">150G</button>
+                    </div>
+                    <div class="shop-item">
+                        <div class="item-info">IRON BOW (DEX SCAN)</div>
+                        <button class="btn-buy" @onclick='() => State.BuyItem("Iron Bow", "rightHand", "data/bow.json", 250, "Ranged")' disabled="@(State.SaveData?.Gold < 250)">250G</button>
+                    </div>
+                    <div class="shop-item">
+                        <div class="item-info">MAGIC STAFF (2H)</div>
+                        <button class="btn-buy" @onclick='() => State.BuyItem("Magic Staff", "rightHand", "data/staff.json", 300, "Staff")' disabled="@(State.SaveData?.Gold < 300)">300G</button>
+                    </div>
+                    <div class="shop-item">
                         <div class="item-info">SHARPEN BLADE (+5 DMG)</div>
                         <button class="btn-buy" @onclick="State.BuyStrength" disabled="@(State.SaveData?.Gold < 150)">150G</button>
                     </div>

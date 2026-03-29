@@ -76,6 +76,7 @@ namespace _3DDungeonCrawler.Models
         public string ModelPath { get; set; } = "";
         public int Power { get; set; } = 1;
         public string Tier { get; set; } = "Iron";
+        public string WeaponType { get; set; } = "Melee"; // Melee, Ranged, Staff
     }
 
     public class BankData

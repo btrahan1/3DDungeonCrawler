@@ -3,7 +3,7 @@
 <div class="overlay char-select-menu">
     <h2 class="title-small">SELECT CHARACTER</h2>
     <div class="slots-container">
-        @for (int i = 0; i < 3; i++)
+        @for (int i = 0; i < 5; i++)
         {
             var slotIndex = i;
             var meta = State.SlotMeta.ContainsKey(slotIndex) ? State.SlotMeta[slotIndex] : null;

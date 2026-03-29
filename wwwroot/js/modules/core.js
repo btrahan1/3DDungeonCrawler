@@ -1,6 +1,6 @@
 window.DungeonCrawler = {
     canvas: null, engine: null, scene: null, camera: null, player: null, ui: null,
-    inputMap: {}, entities: [], chests: [], stairs: null,
+    inputMap: {}, entities: [], chests: [], stairs: null, projectiles: [],
     dungeonSize: 60, gridSize: 2.5, currentLevel: 1, dotnetRef: null,
     isTransitioning: false, isDead: false,
     xp: 0, level: 1, xpToNext: 100, gold: 0, maxHealth: 100, bonusDmg: 0,
@@ -10,7 +10,7 @@ window.DungeonCrawler = {
         if (this.engine) {
             this.entities.forEach(e => { if (e.healthContainerUI) e.healthContainerUI.dispose(); });
             this.scene.dispose();
-            this.entities = []; this.chests = []; this.stairs = null;
+            this.entities = []; this.chests = []; this.stairs = null; this.projectiles = [];
         }
 
         if (savedData) {
@@ -99,8 +99,8 @@ window.DungeonCrawler = {
                 hands: equip.hands?.modelPath,
                 legs: equip.legs?.modelPath,
                 feet: equip.feet?.modelPath,
-                right: equip.rightHand?.modelPath || 'data/sword.json',
-                left: equip.leftHand?.modelPath || 'data/shield.json'
+                right: equip.rightHand?.modelPath,
+                left: equip.leftHand?.modelPath
             };
             this.player = await this.loadVoxelModel(await res.json(), shadowGen, eMap);
             this.player.health = this.maxHealth;
@@ -136,6 +136,7 @@ window.DungeonCrawler = {
             if (this.player && !this.scene.isPaused && !this.isDead) {
                 this.handlePlayerMovement();
                 this.handleNPCMovement();
+                this.updateProjectiles();
                 this.updateAnimations();
                 this.updateHUD();
             }
@@ -186,7 +187,7 @@ window.DungeonCrawler = {
         try {
             const res = await fetch('data/Player.json');
             const equip = savedData.equipment || {};
-            const eMap = { head: equip.head?.modelPath, chest: equip.chest?.modelPath, hands: equip.hands?.modelPath, legs: equip.legs?.modelPath, feet: equip.feet?.modelPath, right: equip.rightHand?.modelPath || 'data/sword.json', left: equip.leftHand?.modelPath || 'data/shield.json' };
+            const eMap = { head: equip.head?.modelPath, chest: equip.chest?.modelPath, hands: equip.hands?.modelPath, legs: equip.legs?.modelPath, feet: equip.feet?.modelPath, right: equip.rightHand?.modelPath, left: equip.leftHand?.modelPath };
             const model = await this.loadVoxelModel(await res.json(), null, eMap, scene);
             model.rotation.y = Math.PI;
         } catch (e) { console.error(e); }

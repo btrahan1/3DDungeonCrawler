@@ -9,7 +9,13 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
                 if (sh === "sphere") m = BABYLON.MeshBuilder.CreateSphere("p", { diameter: 1 }, currentScene);
                 else if (sh === "cylinder") m = BABYLON.MeshBuilder.CreateCylinder("p", { diameter: 1, height: 1 }, currentScene);
                 else m = BABYLON.MeshBuilder.CreateBox(pt.Id || "p", { size: 1 }, currentScene);
-                m.parent = g; m.position.set(pt.Position[0], pt.Position[1], pt.Position[2]); m.rotation.set(pt.Rotation[0]*Math.PI/180, pt.Rotation[1]*Math.PI/180, pt.Rotation[2]*Math.PI/180); m.scaling.set(pt.Scale[0], pt.Scale[1], pt.Scale[2]);
+                m.parent = g; 
+                const ps = pt.Position || pt.position || [0,0,0];
+                const rt = pt.Rotation || pt.rotation || [0,0,0];
+                const sc = pt.Scale || pt.scale || [1,1,1];
+                m.position.set(ps[0], ps[1], ps[2]); 
+                m.rotation.set(rt[0]*Math.PI/180, rt[1]*Math.PI/180, rt[2]*Math.PI/180); 
+                m.scaling.set(sc[0], sc[1], sc[2]);
                 const mt = new BABYLON.StandardMaterial("pm", currentScene); mt.diffuseColor = BABYLON.Color3.FromHexString(pt.ColorHex || "#FFFFFF");
                 if ((pt.Material || "").toLowerCase().includes("metal")) { mt.specularPower = 64; mt.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5); } else if ((pt.Material || "").toLowerCase().includes("glow")) mt.emissiveColor = mt.diffuseColor;
                 m.material = mt; if(s) s.addShadowCaster(m);

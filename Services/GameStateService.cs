@@ -76,7 +76,7 @@ namespace _3DDungeonCrawler.Services
         {
             try {
                 SlotMeta.Clear();
-                for (int i = 0; i < 3; i++) {
+                for (int i = 0; i < 5; i++) {
                     var json = await _js.InvokeAsync<string>("localStorage.getItem", "dungeonSave_slot_" + i);
                     if (!string.IsNullOrEmpty(json)) {
                         var save = System.Text.Json.JsonSerializer.Deserialize<HeroSave>(json, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
@@ -143,6 +143,25 @@ namespace _3DDungeonCrawler.Services
                     save.Wisdom += 1;
                     save.Strength -= 1;
                     save.Constitution -= 1;
+                    break;
+            }
+
+            // Apply Class Starting Items (in inventory, not equipped)
+            switch (cls.ToUpper())
+            {
+                case "WARRIOR":
+                    save.Inventory.Add(new GameItem { Name = "Iron Sword", Slot = "rightHand", ModelPath = "data/sword.json", WeaponType = "Melee", Power = 1 });
+                    save.Inventory.Add(new GameItem { Name = "Steel Shield", Slot = "leftHand", ModelPath = "data/shield.json", Power = 1 });
+                    break;
+                case "MAGE":
+                    save.Inventory.Add(new GameItem { Name = "Magic Staff", Slot = "rightHand", ModelPath = "data/staff.json", WeaponType = "Staff", Power = 1 });
+                    break;
+                case "SCOUT":
+                    save.Inventory.Add(new GameItem { Name = "Iron Bow", Slot = "rightHand", ModelPath = "data/bow.json", WeaponType = "Ranged", Power = 1 });
+                    break;
+                case "HEALER":
+                    save.Inventory.Add(new GameItem { Name = "Iron Mace", Slot = "rightHand", ModelPath = "data/mace.json", WeaponType = "Melee", Power = 1 });
+                    save.Inventory.Add(new GameItem { Name = "Steel Shield", Slot = "leftHand", ModelPath = "data/shield.json", Power = 1 });
                     break;
             }
 
@@ -235,7 +254,18 @@ namespace _3DDungeonCrawler.Services
             var item = SaveData.Inventory[index];
             var slot = item.Slot;
             
-            SaveData.Inventory.RemoveAt(index);
+            // Handle Two-Handed logic (Shield + Bow/Staff restriction)
+            if (slot == "rightHand" && (item.WeaponType == "Ranged" || item.WeaponType == "Staff")) {
+                var leftItem = SaveData.Equipment.LeftHand;
+                if (leftItem != null) await UnequipItem("leftHand");
+            } else if (slot == "leftHand") {
+                var rightItem = SaveData.Equipment.RightHand;
+                if (rightItem != null && (rightItem.WeaponType == "Ranged" || rightItem.WeaponType == "Staff")) {
+                    await UnequipItem("rightHand");
+                }
+            }
+
+            SaveData.Inventory.Remove(item); // Use object reference to be safe since we might have unequipped things
             var oldItem = SaveData.Equipment.GetSlot(slot);
             if (oldItem != null) SaveData.Inventory.Add(oldItem);
             
@@ -272,11 +302,11 @@ namespace _3DDungeonCrawler.Services
             }
         }
 
-        public async Task BuyItem(string name, string slot, string model, int price)
+        public async Task BuyItem(string name, string slot, string model, int price, string weaponType = "Melee")
         {
             if (SaveData != null && SaveData.Gold >= price) {
                 SaveData.Gold -= price;
-                SaveData.Inventory.Add(new GameItem { Name = name, Slot = slot, ModelPath = model, Power = 1, Tier = "Iron" });
+                SaveData.Inventory.Add(new GameItem { Name = name, Slot = slot, ModelPath = model, Power = 1, Tier = "Iron", WeaponType = weaponType });
                 await UpdateAndSave();
             }
         }
@@ -406,6 +436,16 @@ namespace _3DDungeonCrawler.Services
             string model = slot == "leftHand" ? "data/shield.json" : (slot == "rightHand" ? "data/sword.json" : "data/shield.json");
 
             var newItem = new GameItem { Name = name, Slot = slot, ModelPath = model, Power = dungeonLevel, Tier = tier };
+            
+            // Randomize weapon types for rightHand drops
+            if (slot == "rightHand") {
+                int r = new Random().Next(4);
+                if (r == 0) { newItem.Name = $"{tier} Mace"; newItem.ModelPath = "data/mace.json"; newItem.WeaponType = "Melee"; }
+                else if (r == 1) { newItem.Name = $"{tier} Bow"; newItem.ModelPath = "data/bow.json"; newItem.WeaponType = "Ranged"; }
+                else if (r == 2) { newItem.Name = $"{tier} Staff"; newItem.ModelPath = "data/staff.json"; newItem.WeaponType = "Staff"; }
+                else { newItem.Name = $"{tier} Sword"; newItem.ModelPath = "data/sword.json"; newItem.WeaponType = "Melee"; }
+            }
+
             SaveData.Inventory.Add(newItem);
             await UpdateAndSave();
             LootMessage = name;

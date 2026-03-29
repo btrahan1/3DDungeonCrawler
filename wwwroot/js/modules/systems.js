@@ -9,29 +9,116 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
 
     handlePlayerAttack: function () {
         if (this.isDead || this.player.isSwinging) return;
-        const cost = 10;
-        if (this.stamina < cost) {
-            this.showDamageText("LOW STAMINA", this.player.position.clone(), "orange");
-            return;
+        
+        const weapon = this.equipment.rightHand;
+        const isRanged = weapon && weapon.weaponType === "Ranged";
+        const isStaff = weapon && weapon.weaponType === "Staff";
+        
+        if (isStaff) {
+            const manaCost = 15;
+            if (this.mana < manaCost) {
+                this.showDamageText("LOW MANA", this.player.position.clone(), "cyan");
+                return;
+            }
+            this.mana -= manaCost;
+        } else {
+            const staminaCost = isRanged ? 15 : 10;
+            if (this.stamina < staminaCost) {
+                this.showDamageText("LOW STAMINA", this.player.position.clone(), "orange");
+                return;
+            }
+            this.stamina -= staminaCost;
         }
-        this.stamina -= cost;
-        this.performSwing(this.player);
-        let weaponPower = 0; if (this.equipment.rightHand && this.equipment.rightHand.power) weaponPower = this.equipment.rightHand.power;
-        const dmg = 15 + (this.level * 2) + this.bonusDmg + (weaponPower * 5);
-        setTimeout(() => {
-            this.entities.forEach(n => {
-                if (BABYLON.Vector3.Distance(this.player.position, n.position) < 3 && BABYLON.Vector3.Dot(this.player.forward, n.position.subtract(this.player.position).normalize()) > 0.5) {
-                    n.health -= dmg; n.healthContainerUI.isVisible = true; n.healthBarUI.width = (n.health/n.maxHealth*100) + "%";
-                    n.moveWithCollisions(n.position.subtract(this.player.position).normalize().scale(0.6)); this.showDamageText("-" + dmg, n.position.clone(), "white");
+        
+        if (isRanged) {
+            this.fireArrow();
+        } else if (isStaff) {
+            this.fireMageBolt();
+        } else {
+            this.performSwing(this.player);
+            let weaponPower = weapon?.power || 0;
+            const dmg = 15 + (this.level * 2) + this.bonusDmg + (weaponPower * 5);
+            setTimeout(() => {
+                this.entities.forEach(n => {
+                    if (BABYLON.Vector3.Distance(this.player.position, n.position) < 3 && BABYLON.Vector3.Dot(this.player.forward, n.position.subtract(this.player.position).normalize()) > 0.5) {
+                        n.health -= dmg; n.healthContainerUI.isVisible = true; n.healthBarUI.width = (n.health/n.maxHealth*100) + "%";
+                        n.moveWithCollisions(n.position.subtract(this.player.position).normalize().scale(0.6)); this.showDamageText("-" + dmg, n.position.clone(), "white");
+                        if (n.health <= 0) {
+                            if (n.isBoss) this.spawnBossChest(n.position.clone());
+                            this.addXP(n.isBoss ? 150 : (n.maxHealth > 40 ? 40 : 15));
+                            this.entities = this.entities.filter(e => e !== n);
+                            n.healthContainerUI.dispose(); n.dispose();
+                        }
+                    }
+                });
+            }, 150);
+        }
+    },
+
+    fireArrow: async function () {
+        if (this.player.isSwinging) return;
+        this.player.isSwinging = true;
+        setTimeout(() => this.player.isSwinging = false, 500);
+
+        const weapon = this.equipment.rightHand;
+        const weaponPower = weapon?.power || 0;
+        const dex = (this.attributes?.dexterity || 10);
+        const dmg = 12 + (this.level * 2) + (dex - 10) * 4 + (weaponPower * 5);
+        
+        const arrow = await this.loadProp('data/arrow.json', null);
+        arrow.position = this.player.position.clone().add(new BABYLON.Vector3(0, 1.2, 0)).add(this.player.forward.scale(0.5));
+        arrow.rotation = this.player.rotation.clone();
+        arrow.rotation.y += Math.PI; // Correct for model orientation if needed
+        
+        const velocity = this.player.forward.scale(0.5);
+        this.projectiles.push({ mesh: arrow, velocity: velocity, damage: dmg, lifetime: 100 });
+    },
+
+    fireMageBolt: async function () {
+        if (this.player.isSwinging) return;
+        this.player.isSwinging = true;
+        setTimeout(() => this.player.isSwinging = false, 500);
+
+        const weapon = this.equipment.rightHand;
+        const weaponPower = weapon?.power || 0;
+        const intel = (this.attributes?.intelligence || 10);
+        const dmg = 15 + (this.level * 2) + (intel - 10) * 6 + (weaponPower * 5);
+        
+        const bolt = await this.loadProp('data/bolt.json', null);
+        bolt.position = this.player.position.clone().add(new BABYLON.Vector3(0, 1.3, 0)).add(this.player.forward.scale(0.4));
+        bolt.rotation = this.player.rotation.clone();
+        
+        const velocity = this.player.forward.scale(0.35); // Slightly slower than arrow
+        this.projectiles.push({ mesh: bolt, velocity: velocity, damage: dmg, lifetime: 80 });
+    },
+
+    updateProjectiles: function () {
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+            const p = this.projectiles[i];
+            p.mesh.position.addInPlace(p.velocity);
+            p.lifetime--;
+
+            let hit = false;
+            for (let j = this.entities.length - 1; j >= 0; j--) {
+                const n = this.entities[j];
+                if (BABYLON.Vector3.Distance(p.mesh.position, n.position.add(new BABYLON.Vector3(0, 1, 0))) < 1.0) {
+                    n.health -= p.damage; n.healthContainerUI.isVisible = true; n.healthBarUI.width = (n.health/n.maxHealth*100) + "%";
+                    n.moveWithCollisions(p.velocity.scale(0.4)); this.showDamageText("-" + p.damage, n.position.clone(), "white");
                     if (n.health <= 0) {
                         if (n.isBoss) this.spawnBossChest(n.position.clone());
                         this.addXP(n.isBoss ? 150 : (n.maxHealth > 40 ? 40 : 15));
                         this.entities = this.entities.filter(e => e !== n);
                         n.healthContainerUI.dispose(); n.dispose();
                     }
+                    hit = true; break;
                 }
-            });
-        }, 150);
+            }
+
+            if (hit || p.lifetime <= 0) {
+                p.mesh.dispose();
+                this.projectiles.splice(i, 1);
+            }
+        }
     },
 
     addXP: function (amount) {
