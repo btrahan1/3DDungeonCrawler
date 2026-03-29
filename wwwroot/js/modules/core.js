@@ -1,11 +1,12 @@
 window.DungeonCrawler = {
-    canvas: null, engine: null, scene: null, camera: null, player: null, ui: null,
+    canvas: null, engine: null, scene: null, camera: null, player: null, ui: null, lastState: null,
     inputMap: {}, entities: [], chests: [], stairs: null, projectiles: [],
     dungeonSize: 60, gridSize: 2.5, currentLevel: 1, dotnetRef: null,
     isTransitioning: false, isDead: false,
     xp: 0, level: 1, xpToNext: 100, gold: 0, maxHealth: 100, bonusDmg: 0,
     playerClass: "WARRIOR", attributes: { wisdom: 10 },
     potions: { hp: 0, st: 0, mp: 0, rest: 0 },
+    learnedAbilities: [],
     equipment: {}, inventory: [],
 
     init: async function (canvasId, dotnetRef, savedData) {
@@ -16,6 +17,7 @@ window.DungeonCrawler = {
         }
 
         if (savedData) {
+            this.lastState = savedData;
             this.xp = savedData.xp || 0;
             this.level = savedData.level || 1;
             this.gold = savedData.gold || 0;
@@ -36,6 +38,7 @@ window.DungeonCrawler = {
             };
             this.playerClass = savedData.class || "WARRIOR";
             this.potions = { hp: savedData.healthPotions || 0, st: savedData.staminaPotions || 0, mp: savedData.manaPotions || 0, rest: savedData.restorationPotions || 0 };
+            this.learnedAbilities = savedData.learnedAbilities || [];
             this.equipment = savedData.equipment || {};
             this.inventory = savedData.inventory || [];
             this.xpToNext = this.level * 100;
@@ -64,13 +67,16 @@ window.DungeonCrawler = {
 
         this.ui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
         this.initHUD();
+        this.refreshAbilityButtons();
 
         this.scene.onKeyboardObservable.add((kbInfo) => {
             const key = kbInfo.event.key.toLowerCase();
             if (kbInfo.type === BABYLON.KeyboardEventTypes.KEYDOWN) {
                 this.inputMap[key] = true;
                 if (key === " " && !this.isDead) this.handlePlayerAttack();
-                if (key === "q" && !this.isDead && this.playerClass === "HEALER") this.handleHealSpell();
+                if (key === "q" && !this.isDead && (this.learnedAbilities.includes("Heal") || this.playerClass === "HEALER")) this.handleHealSpell();
+                if (key === "r" && !this.isDead && this.learnedAbilities.includes("Power Strike")) this.handlePowerStrike();
+                if (key === "f" && !this.isDead && this.learnedAbilities.includes("Shield")) this.handleShieldSpell();
                 if (key === "1" && !this.isDead) this.handleUsePotion("hp");
                 if (key === "2" && !this.isDead) this.handleUsePotion("st");
                 if (key === "3" && !this.isDead) this.handleUsePotion("mp");
@@ -117,21 +123,32 @@ window.DungeonCrawler = {
             this.camera.setTarget(this.player);
         } catch (e) { console.error(e); }
 
+        let potionChestSpawned = false;
         for (let i = 1; i < dungeonData.rooms.length; i++) {
             const room = dungeonData.rooms[i];
             const isBossRoom = (i === dungeonData.rooms.length - 1);
-            if (!isBossRoom && Math.random() > 0.6) continue;
-            const isG = Math.random() > 0.4;
-            const resN = await fetch(isG ? 'data/goblin.json' : 'data/orc.json');
-            const eMap = isG ? { right: 'data/axe.json' } : { right: 'data/mace.json' };
-            const npc = await this.loadVoxelModel(await resN.json(), shadowGen, eMap);
-            npc.position = new BABYLON.Vector3((room.x+room.w/2)*this.gridSize, 0.1, (room.y+room.h/2)*this.gridSize);
-            if (isBossRoom) { npc.scaling.set(2.25, 2.25, 2.25); npc.health = (isG ? 100 : 200) + (this.currentLevel * 20); npc.isBoss = true; } else { npc.health = isG ? 30 : 60; }
-            npc.maxHealth = npc.health; npc.isNPC = true; this.entities.push(npc); this.createHealthBar(npc, isBossRoom ? -150 : -100);
-            if (!isBossRoom && Math.random() > 0.5) {
-                const chest = await this.loadProp('data/chest.json', shadowGen);
-                chest.position = new BABYLON.Vector3((room.x+1)*this.gridSize, 0, (room.y+1)*this.gridSize);
-                chest.isChest = true; this.chests.push(chest);
+            if (isBossRoom || Math.random() > 0.6) {
+                const isG = Math.random() > 0.4;
+                const resN = await fetch(isG ? 'data/goblin.json' : 'data/orc.json');
+                const eMap = isG ? { right: 'data/axe.json' } : { right: 'data/mace.json' };
+                const npc = await this.loadVoxelModel(await resN.json(), shadowGen, eMap);
+                npc.position = new BABYLON.Vector3((room.x+room.w/2)*this.gridSize, 0.1, (room.y+room.h/2)*this.gridSize);
+                if (isBossRoom) { npc.scaling.set(2.25, 2.25, 2.25); npc.health = (isG ? 100 : 200) + (this.currentLevel * 20); npc.isBoss = true; } else { npc.health = isG ? 30 : 60; }
+                npc.maxHealth = npc.health; npc.isNPC = true; this.entities.push(npc); this.createHealthBar(npc, isBossRoom ? -150 : -100);
+            }
+
+            if (!isBossRoom) {
+                if (!potionChestSpawned && (Math.random() > 0.4 || i === dungeonData.rooms.length - 2)) {
+                    const chest = await this.loadProp('data/chest.json', shadowGen);
+                    chest.position = new BABYLON.Vector3((room.x+1)*this.gridSize, 0, (room.y+1)*this.gridSize);
+                    chest.isChest = true; chest.isPotionChest = true; this.chests.push(chest);
+                    chest.getChildMeshes().forEach(m => { if (m.material) { const mat = m.material.clone("pc"); mat.emissiveColor = new BABYLON.Color3(0, 0.5, 1.0); m.material = mat; } });
+                    potionChestSpawned = true;
+                } else if (Math.random() > 0.7) {
+                    const chest = await this.loadProp('data/chest.json', shadowGen);
+                    chest.position = new BABYLON.Vector3((room.x+room.w-2)*this.gridSize, 0, (room.y+room.h-2)*this.gridSize);
+                    chest.isChest = true; this.chests.push(chest);
+                }
             }
         }
 
@@ -155,6 +172,7 @@ window.DungeonCrawler = {
 
     updateGameState: function(savedData) {
         if (savedData) {
+            this.lastState = savedData;
             this.xp = savedData.xp || 0;
             this.level = savedData.level || 1;
             this.gold = savedData.gold || 0;
@@ -166,8 +184,10 @@ window.DungeonCrawler = {
             this.maxMana = savedData.maxMana || 50;
             this.xpToNext = this.level * 100;
             this.equipment = savedData.equipment || {};
+            this.learnedAbilities = savedData.learnedAbilities || [];
             this.potions = { hp: savedData.healthPotions || 0, st: savedData.staminaPotions || 0, mp: savedData.manaPotions || 0, rest: savedData.restorationPotions || 0 };
             if (this.player && this.player.health > this.maxHealth) this.player.health = this.maxHealth;
+            this.refreshAbilityButtons();
             console.log("Game state synced from .NET:", savedData);
         }
     },
@@ -214,7 +234,7 @@ window.DungeonCrawler = {
         this.player.isMoving = mov;
 
         // Passive Regeneration (per frame @ 60fps)
-        if (this.stamina < this.maxStamina) this.stamina = Math.min(this.maxStamina, this.stamina + 0.15);
+        if (this.stamina < this.maxStamina) this.stamina = Math.min(this.maxStamina, this.stamina + 0.075);
         if (this.mana < this.maxMana) this.mana = Math.min(this.maxMana, this.mana + 0.05);
     },
 

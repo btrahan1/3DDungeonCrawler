@@ -162,6 +162,7 @@ namespace _3DDungeonCrawler.Services
                 case "HEALER":
                     save.Inventory.Add(new GameItem { Name = "Iron Mace", Slot = "rightHand", ModelPath = "data/mace.json", WeaponType = "Melee", Power = 1 });
                     save.Inventory.Add(new GameItem { Name = "Steel Shield", Slot = "leftHand", ModelPath = "data/shield.json", Power = 1 });
+                    save.LearnedAbilities.Add("Heal");
                     break;
             }
 
@@ -289,6 +290,18 @@ namespace _3DDungeonCrawler.Services
         public async Task BuyManaPotion() { if (SaveData != null && SaveData.Gold >= 25) { SaveData.Gold -= 25; SaveData.ManaPotions++; await UpdateAndSave(); } }
         public async Task BuyRestorationPotion() { if (SaveData != null && SaveData.Gold >= 100) { SaveData.Gold -= 100; SaveData.RestorationPotions++; await UpdateAndSave(); } }
 
+        public async Task AddPotion(string type)
+        {
+            if (SaveData == null) return;
+            switch(type.ToLower()) {
+                case "hp": SaveData.HealthPotions++; break;
+                case "st": SaveData.StaminaPotions++; break;
+                case "mp": SaveData.ManaPotions++; break;
+                case "rest": SaveData.RestorationPotions++; break;
+            }
+            await UpdateAndSave();
+        }
+
         [Microsoft.JSInterop.JSInvokable]
         public async Task UsePotion(string type)
         {
@@ -320,6 +333,26 @@ namespace _3DDungeonCrawler.Services
             }
         }
 
+        public async Task BuyAbility(string name, int price, string? reqClass = null)
+        {
+            if (SaveData == null || SaveData.Gold < price) return;
+            if (reqClass != null && SaveData.Class?.ToUpper() != reqClass.ToUpper()) return;
+            if (SaveData.LearnedAbilities.Contains(name)) return;
+            
+            SaveData.Gold -= price;
+            SaveData.LearnedAbilities.Add(name);
+            await UpdateAndSave();
+        }
+
+        [Microsoft.JSInterop.JSInvokable]
+        public async Task UseAbilitySync(int mana, int stamina)
+        {
+            if (SaveData == null) return;
+            SaveData.Mana = mana;
+            SaveData.Stamina = stamina;
+            await UpdateAndSave();
+        }
+
         public async Task DepositToBank(int index)
         {
             if (SaveData == null || Bank.Items.Count >= 24 || index < 0 || index >= SaveData.Inventory.Count) return;
@@ -344,6 +377,14 @@ namespace _3DDungeonCrawler.Services
         {
             if (SaveData == null) return;
             SaveData.Gold += amount;
+            await UpdateAndSave();
+        }
+
+        [Microsoft.JSInterop.JSInvokable]
+        public async Task DescendFloor()
+        {
+            if (SaveData == null) return;
+            SaveData.CurrentLevel++;
             await UpdateAndSave();
         }
 

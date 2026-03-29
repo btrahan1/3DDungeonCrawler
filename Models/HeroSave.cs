@@ -26,6 +26,7 @@ namespace _3DDungeonCrawler.Models
         public int StaminaPotions { get; set; } = 0;
         public int ManaPotions { get; set; } = 0;
         public int RestorationPotions { get; set; } = 0;
+        public List<string> LearnedAbilities { get; set; } = new List<string>();
 
         // Core Attributes (Base 10)
         public int Strength { get; set; } = 10;

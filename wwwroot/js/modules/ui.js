@@ -5,13 +5,9 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         this.ui.addControl(stack);
         this.nameText = new BABYLON.GUI.TextBlock(); this.nameText.text = "LVL " + this.level + " - " + this.playerClass; this.nameText.color = "white"; this.nameText.height = "35px"; this.nameText.fontSize = 18; this.nameText.textHorizontalAlignment = 0; this.nameText.fontFamily = "MedievalSharp"; stack.addControl(this.nameText);
         
-        if (this.playerClass === "HEALER") {
-            const healBtn = BABYLON.GUI.Button.CreateSimpleButton("healBtn", "HEAL (Q)");
-            healBtn.width = "120px"; healBtn.height = "35px"; healBtn.color = "white"; healBtn.background = "#2e7d32";
-            healBtn.fontFamily = "MedievalSharp"; healBtn.cornerRadius = 5; healBtn.thickness = 2;
-            healBtn.onPointerUpObservable.add(() => this.handleHealSpell());
-            stack.addControl(healBtn);
-        }
+        this.abilityStack = new BABYLON.GUI.StackPanel(); this.abilityStack.width = "100%"; this.abilityStack.horizontalAlignment = 0;
+        stack.addControl(this.abilityStack);
+        this.refreshAbilityButtons();
         
         const createBar = (name, color, h, max) => {
             const container = new BABYLON.GUI.StackPanel(); container.isVertical = false; container.height = h + "px"; container.width = "200px"; container.horizontalAlignment = 0;
@@ -92,7 +88,12 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         const panel = new BABYLON.GUI.Rectangle(); panel.width = "300px"; panel.height = "150px"; panel.background = "rgba(0,0,0,0.8)"; panel.color = "#d4af37"; panel.thickness = 2; panel.cornerRadius = 10; this.ui.addControl(panel); this.descentUI = panel;
         const text = new BABYLON.GUI.TextBlock(); text.text = "DESCEND TO LEVEL " + (this.currentLevel + 1) + "?"; text.color = "white"; text.height = "40px"; text.top = "-30px"; panel.addControl(text);
         const btnYes = BABYLON.GUI.Button.CreateSimpleButton("yes", "YES"); btnYes.width = "80px"; btnYes.height = "40px"; btnYes.color = "white"; btnYes.background = "green"; btnYes.left = "-50px"; btnYes.top = "30px";
-        btnYes.onPointerUpObservable.add(() => { panel.dispose(); this.descentUI = null; this.currentLevel++; this.saveGame(); this.showDamageText("DESCENDING...", this.player.position.clone(), "cyan"); setTimeout(() => this.init(this.canvas.id, this.dotnetRef), 1000); });
+        btnYes.onPointerUpObservable.add(async () => { 
+            panel.dispose(); this.descentUI = null; 
+            this.showDamageText("DESCENDING...", this.player.position.clone(), "cyan"); 
+            if (this.dotnetRef) await this.dotnetRef.invokeMethodAsync("DescendFloor");
+            setTimeout(() => this.init(this.canvas.id, this.dotnetRef, this.lastState), 1000); 
+        });
         panel.addControl(btnYes);
         const btnNo = BABYLON.GUI.Button.CreateSimpleButton("no", "NO"); btnNo.width = "80px"; btnNo.height = "40px"; btnNo.color = "white"; btnNo.background = "red"; btnNo.left = "50px"; btnNo.top = "30px";
         btnNo.onPointerUpObservable.add(() => { panel.dispose(); this.descentUI = null; });
@@ -106,5 +107,27 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
             txt.left = proj.x - this.engine.getRenderWidth()/2; txt.top = proj.y - this.engine.getRenderHeight()/2;
             txt.alpha = (txt.alpha || 1) - 0.02; txt.top -= 1; if (txt.alpha <= 0) { clearInterval(loop); txt.dispose(); }
         }, 20);
+    },
+
+    refreshAbilityButtons: function() {
+        if (!this.abilityStack) return;
+        this.abilityStack.clearControls();
+        const createBtn = (text, key, color, action) => {
+            const btn = BABYLON.GUI.Button.CreateSimpleButton("btn" + key, `${text} (${key})`);
+            btn.width = "140px"; btn.height = "35px"; btn.color = "white"; btn.background = color;
+            btn.fontFamily = "MedievalSharp"; btn.cornerRadius = 5; btn.thickness = 2; btn.paddingBottom = "5px"; btn.horizontalAlignment = 0;
+            btn.onPointerUpObservable.add(() => action());
+            this.abilityStack.addControl(btn);
+        };
+
+        if (this.learnedAbilities.includes("Heal") || this.playerClass === "HEALER") {
+            createBtn("HEAL", "Q", "#2e7d32", () => this.handleHealSpell());
+        }
+        if (this.learnedAbilities.includes("Power Strike")) {
+            createBtn("STRIKE", "R", "#8b4513", () => this.handlePowerStrike());
+        }
+        if (this.learnedAbilities.includes("Shield")) {
+            createBtn("SHIELD", "F", "#4682b4", () => this.handleShieldSpell());
+        }
     }
 });

@@ -27,7 +27,7 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
                 this.showDamageText("LOW STAMINA", this.player.position.clone(), "orange");
                 return;
             }
-            this.stamina -= staminaCost;
+            this.stamina -= (this.nextAttackPowerMultiplier > 1.0) ? 0 : staminaCost;
         }
         
         if (isRanged) {
@@ -37,7 +37,9 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         } else {
             this.performSwing(this.player);
             let weaponPower = weapon?.power || 0;
-            const dmg = 15 + (this.level * 2) + this.bonusDmg + (weaponPower * 5);
+            const multiplier = this.nextAttackPowerMultiplier || 1.0;
+            this.nextAttackPowerMultiplier = 1.0; 
+            const dmg = Math.floor((15 + (this.level * 2) + (this.bonusDmg || 0) + (weaponPower * 5)) * multiplier);
             setTimeout(() => {
                 this.entities.forEach(n => {
                     if (BABYLON.Vector3.Distance(this.player.position, n.position) < 3 && BABYLON.Vector3.Dot(this.player.forward, n.position.subtract(this.player.position).normalize()) > 0.5) {
@@ -155,7 +157,8 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
                                 let armorPower = 0; const slots = ["head", "chest", "hands", "legs", "feet", "leftHand"];
                                 slots.forEach(s => { if (this.equipment[s] && this.equipment[s].power) armorPower += this.equipment[s].power; });
                                 const baseDmg = (n.isBoss ? this.currentLevel * 3 : this.currentLevel) + Math.floor(this.currentLevel/2) + 5;
-                                const dmg = Math.max(1, baseDmg - armorPower);
+                                let dmg = Math.max(1, baseDmg - armorPower);
+                                if (this.isShieldActive) dmg = Math.floor(dmg * 0.5);
                                 this.player.health -= dmg; this.showDamageText("-" + dmg, this.player.position.clone(), "red");
                             }
                         }, 250);
@@ -180,6 +183,17 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
             if (BABYLON.Vector3.Distance(this.player.position, c.position) < 2 && !c.isOpen) {
                 c.isOpen = true;
                 if (c.isBossChest && this.dotnetRef) this.dotnetRef.invokeMethodAsync("ClaimBossLoot", this.currentLevel);
+                else if (c.isPotionChest) {
+                    const r = Math.random();
+                    let type = "hp";
+                    let label = "HEALTH";
+                    if (r > 0.9) { type = "rest"; label = "RESTORATION"; }
+                    else if (r > 0.6) { type = "mp"; label = "MANA"; }
+                    else if (r > 0.3) { type = "st"; label = "STAMINA"; }
+                    
+                    if (this.dotnetRef) this.dotnetRef.invokeMethodAsync("AddPotion", type);
+                    this.showDamageText("FOUND " + label + " POTION", c.position.clone(), "#00ffff");
+                }
                 else { 
                     const lootGold = Math.floor(Math.random() * 30) + 20 * this.currentLevel; 
                     if (this.dotnetRef) this.dotnetRef.invokeMethodAsync("AddGold", lootGold);
@@ -214,19 +228,68 @@ window.DungeonCrawler = Object.assign(window.DungeonCrawler || {}, {
         const healAmt = this.attributes.wisdom || 10;
         this.player.health = Math.min(this.maxHealth, this.player.health + healAmt);
         this.showDamageText("+" + healAmt + " HP", this.player.position.clone(), "#32cd32");
+        this.flashPlayer("#32cd32");
         
-        // Optional: Small visual effect (flash)
-        if (this.player.getChildMeshes) {
+        if (this.dotnetRef) this.dotnetRef.invokeMethodAsync("UseAbilitySync", Math.floor(this.mana), Math.floor(this.stamina));
+        this.updateHUD();
+    },
+
+    handlePowerStrike: function() {
+        const now = Date.now();
+        const cooldown = 10000;
+        if (this.powerStrikeLastUsed && now - this.powerStrikeLastUsed < cooldown) {
+            const remain = Math.ceil((cooldown - (now - this.powerStrikeLastUsed)) / 1000);
+            this.showDamageText("COOLDOWN: " + remain + "s", this.player.position.clone(), "#aaa");
+            return;
+        }
+
+        if (this.stamina < 25) {
+            this.showDamageText("LOW STAMINA", this.player.position.clone(), "#ffd700");
+            return;
+        }
+        this.stamina -= 25;
+        this.nextAttackPowerMultiplier = 2.5;
+        this.powerStrikeLastUsed = now;
+        this.showDamageText("POWER STRIKE!", this.player.position.clone(), "#ffff00");
+        this.flashPlayer("#ffff00");
+        
+        // Trigger attack immediately
+        this.handlePlayerAttack();
+
+        if (this.dotnetRef) this.dotnetRef.invokeMethodAsync("UseAbilitySync", Math.floor(this.mana), Math.floor(this.stamina));
+        this.updateHUD();
+    },
+
+    handleShieldSpell: function() {
+        if (this.mana < 20) {
+            this.showDamageText("LOW MANA", this.player.position.clone(), "#1e90ff");
+            return;
+        }
+        this.mana -= 20;
+        this.isShieldActive = true;
+        this.showDamageText("SHIELD ACTIVE", this.player.position.clone(), "#00ffff");
+        this.flashPlayer("#00ffff");
+        
+        setTimeout(() => {
+            this.isShieldActive = false;
+            this.showDamageText("SHIELD FADED", this.player.position.clone(), "#aaa");
+        }, 10000);
+
+        if (this.dotnetRef) this.dotnetRef.invokeMethodAsync("UseAbilitySync", Math.floor(this.mana), Math.floor(this.stamina));
+        this.updateHUD();
+    },
+
+    flashPlayer: function(hex) {
+        if (this.player && this.player.getChildMeshes) {
+            const flashColor = BABYLON.Color3.FromHexString(hex);
             this.player.getChildMeshes().forEach(m => {
                 if (m.material) {
                     const oldEmissive = m.material.emissiveColor?.clone() || new BABYLON.Color3(0,0,0);
-                    m.material.emissiveColor = new BABYLON.Color3(0, 0.5, 0);
-                    setTimeout(() => m.material.emissiveColor = oldEmissive, 200);
+                    m.material.emissiveColor = flashColor.scale(0.5);
+                    setTimeout(() => m.material.emissiveColor = oldEmissive, 300);
                 }
             });
         }
-        
-        this.updateHUD();
     },
 
     handleUsePotion: function (type) {

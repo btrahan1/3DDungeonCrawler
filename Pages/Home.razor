@@ -94,6 +94,18 @@
     }
 
     [JSInvokable]
+    public async Task AddPotion(string type)
+    {
+        await State.AddPotion(type);
+    }
+
+    [JSInvokable]
+    public async Task DescendFloor()
+    {
+        await State.DescendFloor();
+    }
+
+    [JSInvokable]
     public async Task ClaimBossLoot(int dungeonLevel)
     {
         await State.ClaimBossLoot(dungeonLevel);
@@ -103,6 +115,12 @@
     public async Task UsePotion(string type)
     {
         await State.UsePotion(type);
+    }
+
+    [JSInvokable]
+    public async Task UseAbilitySync(int mana, int stamina)
+    {
+        await State.UseAbilitySync(mana, stamina);
     }
 
     [JSInvokable]

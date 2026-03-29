@@ -17,47 +17,80 @@
 
             @if (activeTab == "shop")
             {
+                <div class="shop-nav">
+                    <button class="sub-btn @(shopCategory == "armor" ? "active" : "")" @onclick='() => shopCategory = "armor"'>ARMOR</button>
+                    <button class="sub-btn @(shopCategory == "weapons" ? "active" : "")" @onclick='() => shopCategory = "weapons"'>WEAPONS</button>
+                    <button class="sub-btn @(shopCategory == "potions" ? "active" : "")" @onclick='() => shopCategory = "potions"'>POTIONS</button>
+                    <button class="sub-btn @(shopCategory == "skills" ? "active" : "")" @onclick='() => shopCategory = "skills"'>SKILLS</button>
+                    <button class="sub-btn @(shopCategory == "spells" ? "active" : "")" @onclick='() => shopCategory = "spells"'>SPELLS</button>
+                </div>
+
                 <div class="tab-content">
-                    <div class="shop-item">
-                        <div class="item-info">HP POTION (FULL HP)</div>
-                        <button class="btn-buy" @onclick="State.BuyHealthPotion" disabled="@(State.SaveData?.Gold < 30)">30G</button>
-                    </div>
-                    <div class="shop-item">
-                        <div class="item-info">ST POTION (FULL STA)</div>
-                        <button class="btn-buy" @onclick="State.BuyStaminaPotion" disabled="@(State.SaveData?.Gold < 25)">25G</button>
-                    </div>
-                    <div class="shop-item">
-                        <div class="item-info">MP POTION (FULL MANA)</div>
-                        <button class="btn-buy" @onclick="State.BuyManaPotion" disabled="@(State.SaveData?.Gold < 25)">25G</button>
-                    </div>
-                    <div class="shop-item">
-                        <div class="item-info">REST POTION (ALL FULL)</div>
-                        <button class="btn-buy" @onclick="State.BuyRestorationPotion" disabled="@(State.SaveData?.Gold < 100)">100G</button>
-                    </div>
-                    <div class="shop-item">
-                        <div class="item-info">IRON HELMET (+2 DEF)</div>
-                        <button class="btn-buy" @onclick='() => State.BuyItem("Iron Helmet", "head", "data/shield.json", 100)' disabled="@(State.SaveData?.Gold < 100)">100G</button>
-                    </div>
-                    <div class="shop-item">
-                        <div class="item-info">STEEL SHIELD</div>
-                        <button class="btn-buy" @onclick='() => State.BuyItem("Steel Shield", "leftHand", "data/shield.json", 200)' disabled="@(State.SaveData?.Gold < 200)">200G</button>
-                    </div>
-                    <div class="shop-item">
-                        <div class="item-info">IRON MACE</div>
-                        <button class="btn-buy" @onclick='() => State.BuyItem("Iron Mace", "rightHand", "data/mace.json", 150, "Melee")' disabled="@(State.SaveData?.Gold < 150)">150G</button>
-                    </div>
-                    <div class="shop-item">
-                        <div class="item-info">IRON BOW (DEX SCAN)</div>
-                        <button class="btn-buy" @onclick='() => State.BuyItem("Iron Bow", "rightHand", "data/bow.json", 250, "Ranged")' disabled="@(State.SaveData?.Gold < 250)">250G</button>
-                    </div>
-                    <div class="shop-item">
-                        <div class="item-info">MAGIC STAFF (2H)</div>
-                        <button class="btn-buy" @onclick='() => State.BuyItem("Magic Staff", "rightHand", "data/staff.json", 300, "Staff")' disabled="@(State.SaveData?.Gold < 300)">300G</button>
-                    </div>
-                    <div class="shop-item">
-                        <div class="item-info">SHARPEN BLADE (+5 DMG)</div>
-                        <button class="btn-buy" @onclick="State.BuyStrength" disabled="@(State.SaveData?.Gold < 150)">150G</button>
-                    </div>
+                    @if (shopCategory == "armor")
+                    {
+                        <div class="shop-item">
+                            <div class="item-info">IRON HELMET (+2 DEF)</div>
+                            <button class="btn-buy" @onclick='() => State.BuyItem("Iron Helmet", "head", "data/shield.json", 100)' disabled="@(State.SaveData?.Gold < 100)">100G</button>
+                        </div>
+                        <div class="shop-item">
+                            <div class="item-info">STEEL SHIELD</div>
+                            <button class="btn-buy" @onclick='() => State.BuyItem("Steel Shield", "leftHand", "data/shield.json", 200)' disabled="@(State.SaveData?.Gold < 200)">200G</button>
+                        </div>
+                    }
+                    else if (shopCategory == "weapons")
+                    {
+                        <div class="shop-item">
+                            <div class="item-info">IRON MACE</div>
+                            <button class="btn-buy" @onclick='() => State.BuyItem("Iron Mace", "rightHand", "data/mace.json", 150, "Melee")' disabled="@(State.SaveData?.Gold < 150)">150G</button>
+                        </div>
+                        <div class="shop-item">
+                            <div class="item-info">IRON BOW (DEX SCAN)</div>
+                            <button class="btn-buy" @onclick='() => State.BuyItem("Iron Bow", "rightHand", "data/bow.json", 250, "Ranged")' disabled="@(State.SaveData?.Gold < 250)">250G</button>
+                        </div>
+                        <div class="shop-item">
+                            <div class="item-info">MAGIC STAFF (2H)</div>
+                            <button class="btn-buy" @onclick='() => State.BuyItem("Magic Staff", "rightHand", "data/staff.json", 300, "Staff")' disabled="@(State.SaveData?.Gold < 300)">300G</button>
+                        </div>
+                    }
+                    else if (shopCategory == "potions")
+                    {
+                        <div class="shop-item">
+                            <div class="item-info">HP POTION (FULL HP)</div>
+                            <button class="btn-buy" @onclick="State.BuyHealthPotion" disabled="@(State.SaveData?.Gold < 30)">30G</button>
+                        </div>
+                        <div class="shop-item">
+                            <div class="item-info">ST POTION (FULL STA)</div>
+                            <button class="btn-buy" @onclick="State.BuyStaminaPotion" disabled="@(State.SaveData?.Gold < 25)">25G</button>
+                        </div>
+                        <div class="shop-item">
+                            <div class="item-info">MP POTION (FULL MANA)</div>
+                            <button class="btn-buy" @onclick="State.BuyManaPotion" disabled="@(State.SaveData?.Gold < 25)">25G</button>
+                        </div>
+                        <div class="shop-item">
+                            <div class="item-info">REST POTION (ALL FULL)</div>
+                            <button class="btn-buy" @onclick="State.BuyRestorationPotion" disabled="@(State.SaveData?.Gold < 100)">100G</button>
+                        </div>
+                    }
+                    else if (shopCategory == "skills")
+                    {
+                        <div class="shop-item">
+                            <div class="item-info">SHARPEN BLADE (+5 DMG)</div>
+                            <button class="btn-buy" @onclick="State.BuyStrength" disabled="@(State.SaveData?.Gold < 150)">150G</button>
+                        </div>
+                        <div class="shop-item">
+                            <div class="item-info">POWER STRIKE (WARRIOR)</div>
+                            <button class="btn-buy" @onclick='() => State.BuyAbility("Power Strike", 150, "WARRIOR")' 
+                                    disabled="@(State.SaveData?.Gold < 150 || State.SaveData?.Class != "WARRIOR" || State.SaveData?.LearnedAbilities.Contains("Power Strike") == true)">150G</button>
+                        </div>
+                    }
+                    else if (shopCategory == "spells")
+                    {
+                        <div class="shop-item">
+                            <div class="item-info">SHIELD (MAGE)</div>
+                            <button class="btn-buy" @onclick='() => State.BuyAbility("Shield", 200, "MAGE")' 
+                                    disabled="@(State.SaveData?.Gold < 200 || State.SaveData?.Class != "MAGE" || State.SaveData?.LearnedAbilities.Contains("Shield") == true)">200G</button>
+                        </div>
+                    }
                 </div>
             }
             else
@@ -89,6 +122,7 @@
 
 @code {
     private string activeTab = "shop";
+    private string shopCategory = "armor";
 
     protected override void OnInitialized()
     {
